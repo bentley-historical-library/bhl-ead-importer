@@ -13,3 +13,7 @@ The custom importer does the following:
   1. Creates digital object titles---when they don't exist in the EAD---based on the parent archival object's title and date(s) so that records import.
   
 These customizations are specific to version 1.1.2 of ArchivesSpace and may not work with later versions.
+
+Acknowledgements
+----------------
+We were inspired by Chris Fitzpatrick's [post](https://archivesspace.atlassian.net/wiki/pages/viewpage.action;jsessionid=B61CF1FF951457641EDB06B6FAA9C599?pageId=18088140) on customizing ArchivesSpace EAD importers and exporters.

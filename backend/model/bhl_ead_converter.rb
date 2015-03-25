@@ -25,7 +25,11 @@ class BHLEADConverter < EADConverter
   def self.configure
     super
 
-# The stock EAD converter creates separate index items for each indexentry, one for the value (persname, famname, etc) and one for the reference (ref), even when they are within the same indexentry and are related (i.e., the persname is a correspondent, the ref is a date or a location at which correspondence with that person can be found). The Bentley's <indexentry>s generally look something like: <indexentry><persname>Some person</persname><ref>Some date or folder</ref></indexentry>. As the <persname> and the <ref> are associated with one another, we want to keep them together in the same index item in ArchiveSpace. 
+# The stock EAD converter creates separate index items for each indexentry, one for the value (persname, famname, etc) and one for the reference (ref)
+# even when they are within the same indexentry and are related (i.e., the persname is a correspondent, the ref is a date or a location at which 
+# correspondence with that person can be found). The Bentley's <indexentry>s generally look something like: 
+# <indexentry><persname>Some person</persname><ref>Some date or folder</ref></indexentry>
+# As the <persname> and the <ref> are associated with one another, we want to keep them together in the same index item in ArchiveSpace. 
 
 # First we set the stock indexentry actions to ignore to avoid running each indexentry/x and indexentry/ref multiple times.
 	{
@@ -112,7 +116,12 @@ with 'indexentry' do
 	
 	
 
-# The Bentley has many EADs with <dao> tags that lack title attributes. The stock ArchivesSpace EAD Converter uses each <dao>'s title attribute as the value for the imported digital object's title, which is a required property. As a result, all of our EADs with <dao> tags fail when trying to import into ArchivesSpace. This section of the BHL EAD Converter plugin modifies the stock ArchivesSpace EAD Converter by forming a string containing the digital object's parent archival object's title and date (if both exist), or just it's title (if only the title exists), or just it's date (if only the date exists) and then using that string as the imported digital object's title. 
+# The Bentley has many EADs with <dao> tags that lack title attributes. 
+# The stock ArchivesSpace EAD Converter uses each <dao>'s title attribute as the value for the imported digital object's title, which is a required property. 
+# As a result, all of our EADs with <dao> tags fail when trying to import into ArchivesSpace. 
+# This section of the BHL EAD Converter plugin modifies the stock ArchivesSpace EAD Converter by forming a string containing the digital 
+# object's parent archival object's title and date (if both exist), or just it's title (if only the title exists), or just it's date (if only the date exists) 
+# and then using that string as the imported digital object's title. 
 
 with 'dao' do	  
 

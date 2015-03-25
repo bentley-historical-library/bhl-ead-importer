@@ -109,16 +109,16 @@ with 'indexentry' do
 	  entry_reference << child.content
 	  end
 	  
-	  end
+	end
 	  
-		make :note_index_item, {
-          :type => entry_type,
-          :value => entry_value,
-		  :reference_text => entry_reference
-        } do |item|
-          set ancestor(:note_index), :items, item
-        end
-      end
+	make :note_index_item, {
+	  :type => entry_type,
+	  :value => entry_value,
+	  :reference_text => entry_reference
+	  } do |item|
+	set ancestor(:note_index), :items, item
+	end
+end
 	
 	
 
@@ -169,7 +169,7 @@ with 'dao' do
 # or just its title or date (if only one exists)
 	display_string = title || ''
 	display_string += ', ' if title && date_label
-    display_string += date_label if date_label
+	display_string += date_label if date_label
 
 	
 	 make :instance, {

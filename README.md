@@ -11,8 +11,11 @@ The plug-in adds a new importer to the application with the id "bhl_ead_xml". Th
 The custom importer does the following:
 
   1. Creates digital object titles---when they don't exist in the EAD---based on the parent archival object's title and date(s) so that records import.
+  2. Imports index entries with their values and reference texts within the same index item, rather than splitting them into separate items.
   
 These customizations are specific to version 1.1.2 of ArchivesSpace and may not work with later versions.
+
+These customizations are also a work in progress. We will be continue to add more customizations as we identify issues and possible solutions for importing our legacy EADs into ArchivesSpace. 
 
 Acknowledgements
 ----------------

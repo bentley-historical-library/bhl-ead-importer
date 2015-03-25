@@ -34,6 +34,9 @@ The Bentley has many EADs with <dao> tags that lack title attributes. The stock 
 	  # new stuff...
 	  title = ''
 	  ancestor(:resource, :archival_object ) { |ao| title << ao.title }
+	  # untested but should remove commas so we don't get "TITLE,, DATE"
+	  title = title.strip
+	  title = title.chomp(",")
 	  date_label = ''
 	  # WE NEED SOMETHING HERE!
 	  date_label = date_label.to_s

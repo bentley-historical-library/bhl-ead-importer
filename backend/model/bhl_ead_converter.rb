@@ -64,14 +64,14 @@ class BHLEADConverter < EADConverter
 
 with 'indexentry' do
 	
-	entry_type = ''
-	entry_value = ''
-	entry_reference = ''
-	 
-    indexentry = Nokogiri::XML::DocumentFragment.parse(inner_xml)
+  entry_type = ''
+  entry_value = ''
+  entry_reference = ''
+ 
+  indexentry = Nokogiri::XML::DocumentFragment.parse(inner_xml)
 
-	indexentry.children.each do |child|
-	 
+  indexentry.children.each do |child|
+ 
 	  case child.name
 	  when 'name'
 	  entry_value << child.content
@@ -104,12 +104,12 @@ with 'indexentry' do
 	  entry_value << child.content
 	  entry_type << 'geographic_name'
 	  end
-	  
+  
 	  if child.name == 'ref'
 	  entry_reference << child.content
 	  end
-	  
-	end
+  
+  end
 	  
 	make :note_index_item, {
 	  :type => entry_type,

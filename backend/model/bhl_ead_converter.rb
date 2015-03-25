@@ -162,8 +162,8 @@ with 'dao' do
     end
   end
 	
-	title = daotitle
-	date_label = daodate if daodate.length > 0
+  title = daotitle if daotitle.length > 0
+  date_label = daodate if daodate.length > 0
 
 # This forms a display string using the parent archival object's title and date (if both exist),
 # or just its title or date (if only one exists)

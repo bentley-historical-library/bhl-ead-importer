@@ -71,44 +71,44 @@ with 'indexentry' do
   indexentry = Nokogiri::XML::DocumentFragment.parse(inner_xml)
 
   indexentry.children.each do |child|
- 
-	  case child.name
-	  when 'name'
-	  entry_value << child.content
-	  entry_type << 'name'
-	  when 'persname'
-	  entry_value << child.content
-	  entry_type << 'person'	
-	  when 'famname'
-	  entry_value << child.content
-	  entry_type << 'family'
-	  when 'corpname'
-	  entry_value << child.content
-	  entry_type << 'corporate_entity'
-	  when 'subject'
-	  entry_value << child.content
-	  entry_type << 'subject'
-	  when 'function'
-	  entry_value << child.content
-	  entry_type << 'function'
-	  when 'occupation'
-	  entry_value << child.content
-	  entry_type << 'occupation'
-	  when 'genreform'
-	  entry_value << child.content
-	  entry_type << 'genre_form'
-	  when 'title'
-	  entry_value << child.content
-	  entry_type << 'title'
-	  when 'geogname'
-	  entry_value << child.content
-	  entry_type << 'geographic_name'
-	  end
-  
-	  if child.name == 'ref'
-	  entry_reference << child.content
-	  end
-  
+
+    case child.name
+      when 'name'
+      entry_value << child.content
+      entry_type << 'name'
+      when 'persname'
+      entry_value << child.content
+      entry_type << 'person'	
+      when 'famname'
+      entry_value << child.content
+      entry_type << 'family'
+      when 'corpname'
+      entry_value << child.content
+      entry_type << 'corporate_entity'
+      when 'subject'
+      entry_value << child.content
+      entry_type << 'subject'
+      when 'function'
+      entry_value << child.content
+      entry_type << 'function'
+      when 'occupation'
+      entry_value << child.content
+      entry_type << 'occupation'
+      when 'genreform'
+      entry_value << child.content
+      entry_type << 'genre_form'
+      when 'title'
+      entry_value << child.content
+      entry_type << 'title'
+      when 'geogname'
+      entry_value << child.content
+      entry_type << 'geographic_name'
+    end
+	
+    if child.name == 'ref'
+    entry_reference << child.content
+    end
+
   end
 	  
 	make :note_index_item, {

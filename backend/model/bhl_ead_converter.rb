@@ -28,7 +28,6 @@ class BHLEADConverter < EADConverter
   
    with 'list' do
 
-
       next ignore if @ignore 
        
       if  ancestor(:note_multipart)

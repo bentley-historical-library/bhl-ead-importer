@@ -194,6 +194,7 @@ with 'dao' do
 	  end
 	end
 	
+<<<<<<< HEAD
 	title = daotitle
 	date_label = daodate if daodate.length > 0
 
@@ -223,6 +224,22 @@ with 'dao' do
          }
          set ancestor(:instance), :digital_object, obj 
       end
+=======
+  title = daotitle if daotitle.length > 0
+  date_label = daodate if daodate.length > 0
+
+# This forms a display string using the parent archival object's title and date (if both exist),
+# or just its title or date (if only one exists)
+  display_string = title || ''
+  display_string += ', ' if title && date_label
+  display_string += date_label if date_label
+
+  make :instance, {
+    :instance_type => 'digital_object'
+    } do |instance|
+  set ancestor(:resource, :archival_object), :instances, instance
+  end
+>>>>>>> parent of c64d6a9... Bug fix
 
     end
 

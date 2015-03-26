@@ -27,9 +27,7 @@ class BHLEADConverter < EADConverter
 	
   
    with 'list' do
-   # if ancestor(:note_index)
-   # @ignore = true
-   # end
+
 
       next ignore if @ignore 
        

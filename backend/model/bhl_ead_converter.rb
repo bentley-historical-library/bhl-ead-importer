@@ -21,6 +21,15 @@ class BHLEADConverter < EADConverter
   def self.profile
     "Convert EAD To ArchivesSpace JSONModel records"
   end
+  
+  def format_content(content)
+  	return content if content.nil?
+    content.delete!("\n") # first we remove all linebreaks, since they're probably unintentional  
+    content.gsub("<p>","").gsub("</p>","\n\n" ).gsub("<p/>","\n\n")
+  		   .gsub("<lb/>", "\n\n").gsub("<lb>","\n\n").gsub("</lb>","").gsub(/,+/,"") # also remove trailing commas
+  	     .strip
+  end
+  
 
   def self.configure
     super

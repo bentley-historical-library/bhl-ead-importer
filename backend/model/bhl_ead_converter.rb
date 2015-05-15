@@ -86,7 +86,7 @@ class BHLEADConverter < EADConverter
 # The stock ASpace EAD importer only makes "Conditions Governing Access" notes out of <accessrestrict> tags
 # We want to also import our <accessrestrict> tags that have a restriction end date as a "Rights Statements"
 
-# Let ArchivesSpace do it's normal thing with accessrestrict
+# Let ArchivesSpace do its normal thing with accessrestrict
     %w(accessrestrict accessrestrict/legalstatus \
        accruals acqinfo altformavail appraisal arrangement \
        bioghist custodhist dimensions \
@@ -113,7 +113,8 @@ class BHLEADConverter < EADConverter
       end      
     end
 
-# Now make a Rights Statement using with accessrestrict dates
+# Now make a Rights Statement using the content from the "Conditions Governing Access" note
+# and the restriction end date from the accessrestrict/date 
 with 'accessrestrict/date' do
     ancestor(:archival_object) do |ao|
         ao.notes.each do |n|

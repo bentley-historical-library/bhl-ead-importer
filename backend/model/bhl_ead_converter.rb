@@ -33,6 +33,104 @@ class BHLEADConverter < EADConverter
 
   def self.configure
     super
+    
+# The stock EAD importer imports all extents as portion = "whole" 
+# We have some partial extents that we want the importer to import as portion = "part"
+ with 'physdesc' do
+      portion = att('altrender') || 'whole' # We want the EAD importer to know when we're importing partial extents, which we indicator via the altrender attribute
+      physdesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
+      extent_number_and_type = nil
+      other_extent_data = []
+      make_note_too = false
+      physdesc.children.each do |child|
+        if child.respond_to?(:name) && child.name == 'extent'
+          child_content = child.content.strip 
+          if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
+            extent_number_and_type = {:number => $1, :extent_type => $2}
+          else
+            other_extent_data << child_content
+          end
+        else
+          # there's other info here; make a note as well
+          make_note_too = true unless child.text.strip.empty?
+        end
+      end
+
+      # only make an extent if we got a number and type
+      if extent_number_and_type
+        make :extent, {
+          :number => $1,
+          :extent_type => $2,
+          :portion => portion,
+          :container_summary => other_extent_data.join('; ')
+        } do |extent|
+          set ancestor(:resource, :archival_object), :extents, extent
+        end
+      else
+        make_note_too = true;
+      end
+
+      if make_note_too
+        content =  physdesc.to_xml(:encoding => 'utf-8') 
+        make :note_singlepart, {
+          :type => 'physdesc',
+          :persistent_id => att('id'),
+          :content => format_content( content.sub(/<head>.*?<\/head>/, '').strip )
+        } do |note|
+          set ancestor(:resource, :archival_object), :notes, note
+        end
+      end
+
+    end
+    
+# The stock ASpace EAD importer only makes "Conditions Governing Access" notes out of <accessrestrict> tags
+# We want to also import our <accessrestrict> tags that have a restriction end date as a "Rights Statements"
+
+# Let ArchivesSpace do it's normal thing with accessrestrict
+    %w(accessrestrict accessrestrict/legalstatus \
+       accruals acqinfo altformavail appraisal arrangement \
+       bioghist custodhist dimensions \
+       fileplan odd otherfindaid originalsloc phystech \
+       prefercite processinfo relatedmaterial scopecontent \
+       separatedmaterial userestrict ).each do |note|
+      with note do |node|
+        content = inner_xml.tap {|xml|
+          xml.sub!(/<head>.*?<\/head>/m, '')
+          # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
+          # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
+        }
+
+        make :note_multipart, {
+          :type => node.name,
+          :persistent_id => att('id'),
+          :subnotes => {
+            'jsonmodel_type' => 'note_text',
+            'content' => format_content( content )
+          }
+        } do |note|
+          set ancestor(:resource, :archival_object), :notes, note
+        end
+      end      
+    end
+
+# Now make a Rights Statement using with accessrestrict dates
+with 'accessrestrict/date' do
+    ancestor(:archival_object) do |ao|
+        ao.notes.each do |n|
+            if n['type'] == 'accessrestrict'
+                n['subnotes'].each do |sn|
+                make :rights_statement, {
+                :rights_type => 'institutional_policy',
+                :restrictions => sn['content'],
+                :restriction_end_date => att('normal')
+                } do |rights|
+                set ancestor(:resource, :archival_object), :rights_statements, rights
+                end
+                end
+            end
+        end
+    end
+end
 	
  with 'list' do
       next ignore if @ignore 

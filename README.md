@@ -21,4 +21,4 @@ These customizations are also a work in progress. We will be continue to add mor
 
 Acknowledgements
 ----------------
-We were inspired by Chris Fitzpatrick's [post](https://archivesspace.atlassian.net/wiki/pages/viewpage.action;jsessionid=B61CF1FF951457641EDB06B6FAA9C599?pageId=18088140) on customizing ArchivesSpace EAD importers and exporters.
+We were inspired by Chris Fitzpatrick's [post](https://archivesspace.atlassian.net/wiki/pages/viewpage.action;jsessionid=B61CF1FF951457641EDB06B6FAA9C599?pageId=18088140) on customizing ArchivesSpace EAD importers and exporters. Thanks Chris!

@@ -26,7 +26,7 @@ class BHLEADConverter < EADConverter
   	return content if content.nil?
     content.delete!("\n") # first we remove all linebreaks, since they're probably unintentional  
     content.gsub("<p>","").gsub("</p>","\n\n" ).gsub("<p/>","\n\n")
-  		   .gsub("<lb/>", "\n\n").gsub("<lb>","\n\n").gsub("</lb>","").gsub(/\,\s?++/,"") # also remove trailing commas
+  		   .gsub("<lb/>", "\n\n").gsub("<lb>","\n\n").gsub("</lb>","").gsub(/\,+\s?+$/,"") # also remove trailing commas
   	     .strip
   end
   

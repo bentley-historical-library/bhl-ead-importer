@@ -53,54 +53,120 @@ class BHLEADConverter < EADConverter
       end
 =end
 
-with 'archdesc' do
+with 'archref/container' do
     @ignore = true
-    next ignore if @ignore
 end
 
-      # example of a 1:many tag:record relation (1+ <container> => 1 instance with 1 container)
-    with 'container' do
-      next ignore if @ignore
-      @containers ||= {}
+with 'archref/physdesc/dimensions' do
+    @ignore = true
+end
 
-      # we've found that the container has a parent att and the parent is in
-      # our queue
-      if att("parent") && @containers[att('parent')]
-        cont = @containers[att('parent')]
+with 'archref/unittitle' do
+    @ignore = true
+end
 
-      else
-        instance_label = att("label") ? att("label").downcase : 'mixed_materials'
-        make :instance, {
-            :instance_type => instance_label
-          } do |instance|
-            set ancestor(:resource, :archival_object), :instances, instance
-        end
+with 'archref/unittitle/unitdate' do
+    @ignore = true
+end
 
-        inst = context_obj
+with 'archref/note' do
+    @ignore = true
+end
 
-        make :container do |cont|
-          set inst, :container, cont
-        end
+with 'archref/note/p/unitdate' do
+    @ignore = true
+end
 
-        cont =  inst.container
+with 'archref/note/p/geogname' do
+    @ignore = true
+end
+
+with 'unittitle' do |node|
+    ancestor(:note_multipart, :resource, :archival_object) do |obj|
+      unless obj.class.record_type == "note_multipart" or context == "note_orderedlist"
+        title = Nokogiri::XML::DocumentFragment.parse(inner_xml.strip)
+        title.xpath(".//unitdate").remove
+        obj.title = format_content( title.to_xml(:encoding => 'utf-8') )
       end
-
-      # now we fill it in
-      (1..3).to_a.each do |i|
-        next unless cont["type_#{i}"].nil?
-        cont["type_#{i}"] = att('type')
-        cont["indicator_#{i}"] = format_content( inner_xml )
-        break
-      end
-      #store it here incase we find it has a parent
-      @containers[att("id")] = cont
-
     end
+  end
+
+with 'unitdate' do |node|
+  next ignore if @ignore
+   norm_dates = (att('normal') || "").sub(/^\s/, '').sub(/\s$/, '').split('/')
+   if norm_dates.length == 1
+     norm_dates[1] = norm_dates[0]
+   end
+   norm_dates.map! {|d| d =~ /^([0-9]{4}(\-(1[0-2]|0[1-9])(\-(0[1-9]|[12][0-9]|3[01]))?)?)$/ ? d : nil}
+
+   make :date, {
+     :date_type => att('type') || 'inclusive',
+     :expression => inner_xml,
+     :label => 'creation',
+     :begin => norm_dates[0],
+     :end => norm_dates[1],
+     :calendar => att('calendar'),
+     :era => att('era'),
+     :certainty => att('certainty')
+   } do |date|
+     set ancestor(:resource, :archival_object), :dates, date
+   end
+ end
+
+ with 'dimensions' do |node|
+     next ignore if @ignore
+     unless context == :note_orderedlist
+     content = inner_xml.tap {|xml|
+       xml.sub!(/<head>.*?<\/head>/m, '')
+       # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
+       # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
+     }
+
+     make :note_multipart, {
+       :type => node.name,
+       :persistent_id => att('id'),
+       :subnotes => {
+         'jsonmodel_type' => 'note_text',
+         'content' => format_content( content )
+       }
+     } do |note|
+       set ancestor(:resource, :archival_object), :notes, note
+     end
+ end
+end
+
+ %w(accessrestrict accessrestrict/legalstatus \
+   accruals acqinfo altformavail appraisal arrangement \
+   bioghist custodhist \
+   fileplan odd otherfindaid originalsloc phystech \
+   prefercite processinfo relatedmaterial scopecontent \
+   separatedmaterial userestrict ).each do |note|
+  with note do |node|
+    content = inner_xml.tap {|xml|
+      xml.sub!(/<head>.*?<\/head>/m, '')
+      # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
+      # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
+    }
+
+    make :note_multipart, {
+      :type => node.name,
+      :persistent_id => att('id'),
+      :subnotes => {
+        'jsonmodel_type' => 'note_text',
+        'content' => format_content( content )
+      }
+    } do |note|
+      set ancestor(:resource, :archival_object), :notes, note
+    end
+  end
+end
+
 
 
 # The stock EAD importer imports all extents as portion = "whole"
 # We have some partial extents that we want the importer to import as portion = "part"
  with 'physdesc' do
+     next ignore if @ignore
       portion = att('altrender') || 'whole' # We want the EAD importer to know when we're importing partial extents, which we indicator via the altrender attribute
       physdesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
       extent_number_and_type = nil
@@ -147,6 +213,7 @@ end
 
     end
 
+=begin
 # The stock ASpace EAD importer only makes "Conditions Governing Access" notes out of <accessrestrict> tags
 # We want to also import our <accessrestrict> tags that have a restriction end date as a "Rights Statements"
 
@@ -196,6 +263,53 @@ with 'accessrestrict/date' do
         end
     end
 end
+=end
+
+with 'list/head' do |node|
+  next ignore if @ignore
+  set :title, format_content( inner_xml ) if context == :note_orderedlist
+end
+
+with 'descgrp/list' do
+
+    if  ancestor(:note_multipart)
+      left_overs = insert_into_subnotes
+    elsif ancestor(:note_index) # Set this to ignore because our <ref>s have <list>s
+      @ignore = true
+    else
+      left_overs = nil
+      make :note_multipart, {
+        :type => 'odd',
+        :persistent_id => att('id'),
+      } do |note|
+        set ancestor(:resource, :archival_object), :notes, note
+      end
+    end
+
+
+    # now let's make the subnote list
+    type = att('type')
+    if type == 'deflist' || (type.nil? && inner_xml.match(/<deflist>/))
+      make :note_definedlist do |note|
+        set ancestor(:note_multipart), :subnotes, note
+      end
+    else
+      make :note_orderedlist, {
+        :enumeration => att('numeration')
+      } do |note|
+        set ancestor(:note_multipart), :subnotes, note
+      end
+    end
+
+
+    # and finally put the leftovers back in the list of subnotes...
+    if ( !left_overs.nil? && left_overs["content"] && left_overs["content"].length > 0 )
+      set ancestor(:note_multipart), :subnotes, left_overs
+    end
+
+  end
+
+
 
  with 'list' do
       next ignore if @ignore

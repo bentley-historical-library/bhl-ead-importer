@@ -36,22 +36,13 @@ class BHLEADConverter < EADConverter
 
 
 # Setting some of these to ignore because we have some physdesc, container, etc.
-# Within lists in our descgrps at the end of finding aids.
+# Within list/items in our descgrps at the end of finding aids.
 # Without setting these to ignore, ASpace both makes the list AND makes separate
 # notes for physdesc, dimension, etc. and tries to make instances out of the
 # containers, causing import errors.
 # Note: if using this in conjunction with the Yale container management plugin,
 # be sure to include the line 'next ignore if @ignore' within the with container do
 # section of the ConverterExtraContainerValues module.
-
-=begin
-    %w{container physdesc unittitle note}.each do |node_type|
-
-          with "item/archref/#{node_type}" do
-            @ignore = true
-          end
-      end
-=end
 
 with 'archref/container' do
     @ignore = true

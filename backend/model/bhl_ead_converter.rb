@@ -33,6 +33,52 @@ class BHLEADConverter < EADConverter
 
   def self.configure
     super
+    
+# We'll be importing most of our subjects and agents separately and linking directly to the URI from our finding
+# aids and accession records.
+# This will check our corpname, famname, and persname elements in our EADs for a ref attribute
+# If a ref attribute is present, it will use that to link the agent to the resource.
+# If there is no ref attribute, it will make a new agent as usual.
+    
+    with 'controlaccess/corpname' do
+        if att('ref')
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject'}
+        else
+            make_corp_template(:role => 'subject')
+        end
+    end
+
+    with 'origination/famname' do
+        if att('ref')
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
+        else
+            make_family_template(:role => 'creator')
+        end
+    end
+
+    with 'controlaccess/famname' do
+        if att('ref')
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject'}
+        else
+            make_family_template(:role => 'subject')
+        end
+    end
+
+    with 'origination/persname' do
+        if att('ref')
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
+        else
+            make_person_template(:role => 'creator')
+        end
+    end
+    
+    with 'controlaccess/persname' do
+        if att('ref')
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject'}
+        else
+            make_person_template(:role => 'subject')
+        end
+    end    
 
 
 # Setting some of these to ignore because we have some physdesc, container, etc.

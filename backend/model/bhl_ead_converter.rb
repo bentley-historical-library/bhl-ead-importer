@@ -36,14 +36,36 @@ class BHLEADConverter < EADConverter
     
 # We'll be importing most of our subjects and agents separately and linking directly to the URI from our finding
 # aids and accession records.
-# This will check our corpname, famname, and persname elements in our EADs for a ref attribute
+# This will check our subject, geogname, genreform, corpname, famname, and persname elements in our EADs for a ref attribute
 # If a ref attribute is present, it will use that to link the agent to the resource.
 # If there is no ref attribute, it will make a new agent as usual.
-# We also have compound agents (agents with both a persname, corpname or famname subdivided with subject terms)
+# We also have compound agents (agents with both a persname, corpname or famname and subdivided subject terms)
 # In ArchivesSpace, this kind of agent can be represented in a resource by linking to the agent and adding terms/subdivisions
 # within the resource. We will be accomplishing this by invalidating our EAD at some point (gasp!) to add <term> tags
 # around the individual terms in a corpname, persname, or famname. This modification will also make sure that those terms
 # get imported properly.
+
+    {
+      'function' => 'function',
+      'genreform' => 'genre_form',
+      'geogname' => 'geographic',
+      'occupation' => 'occupation',
+      'subject' => 'topical'
+      }.each do |tag, type|
+        with "controlaccess/#{tag}" do
+          if att('ref')
+            set ancestor(:resource, :archival_object), :subjects, {'ref' => att('ref')}
+          else
+            make :subject, {
+                :terms => {'term' => inner_xml, 'term_type' => type, 'vocabulary' => '/vocabularies/1'},
+                :vocabulary => '/vocabularies/1',
+                :source => att('source') || 'ingest'
+              } do |subject|
+                set ancestor(:resource, :archival_object), :subjects, {'ref' => subject.uri}
+                end
+           end
+        end
+     end
     
     with 'origination/corpname' do
         if att('ref')

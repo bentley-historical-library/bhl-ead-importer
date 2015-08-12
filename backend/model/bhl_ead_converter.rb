@@ -39,10 +39,33 @@ class BHLEADConverter < EADConverter
 # This will check our corpname, famname, and persname elements in our EADs for a ref attribute
 # If a ref attribute is present, it will use that to link the agent to the resource.
 # If there is no ref attribute, it will make a new agent as usual.
+# We also have compound agents (agents with both a persname, corpname or famname subdivided with subject terms)
+# In ArchivesSpace, this kind of agent can be represented in a resource by linking to the agent and adding terms/subdivisions
+# within the resource. We will be accomplishing this by invalidating our EAD at some point (gasp!) to add <term> tags
+# around the individual terms in a corpname, persname, or famname. This modification will also make sure that those terms
+# get imported properly.
+    
+    with 'origination/corpname' do
+        if att('ref')
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
+        else
+            make_corp_template(:role => 'creator')
+        end
+    end
     
     with 'controlaccess/corpname' do
+    
+        corpname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
+        terms ||= []
+        corpname.children.each do |child|
+            if child.respond_to?(:name) && child.name == 'term'
+                term = child.content.strip
+                term_type = child['type']
+                terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
+            end
+        end
         if att('ref')
-            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject'}
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms}
         else
             make_corp_template(:role => 'subject')
         end
@@ -57,8 +80,18 @@ class BHLEADConverter < EADConverter
     end
 
     with 'controlaccess/famname' do
+        famname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
+        terms ||= []
+        famname.children.each do |child|
+            if child.respond_to?(:name) && child.name == 'term'
+                term = child.content.strip
+                term_type = child['type']
+                terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
+            end
+        end
+        
         if att('ref')
-            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject'}
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms}
         else
             make_family_template(:role => 'subject')
         end
@@ -73,12 +106,22 @@ class BHLEADConverter < EADConverter
     end
     
     with 'controlaccess/persname' do
+        persname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
+        terms ||= []
+        persname.children.each do |child|
+            if child.respond_to?(:name) && child.name == 'term'
+                term = child.content.strip
+                term_type = child['type']
+                terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
+            end
+        end
+        
         if att('ref')
-            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject'}
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms}
         else
             make_person_template(:role => 'subject')
         end
-    end    
+    end
 
 
 # Setting some of these to ignore because we have some physdesc, container, etc.
@@ -253,6 +296,7 @@ end
 =begin
 # The stock ASpace EAD importer only makes "Conditions Governing Access" notes out of <accessrestrict> tags
 # We want to also import our <accessrestrict> tags that have a restriction end date as a "Rights Statements"
+# Update: we probably aren't actually going to do this. Leaving this here, commented out, for future reference.
 
 # Let ArchivesSpace do its normal thing with accessrestrict
     %w(accessrestrict accessrestrict/legalstatus \

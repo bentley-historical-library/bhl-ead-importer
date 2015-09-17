@@ -33,7 +33,12 @@ class BHLEADConverter < EADConverter
 
   def self.configure
     super
-    
+
+# Test this on nested lists:
+# with 'item/list' do
+#    @ignore = true
+
+
 # We'll be importing most of our subjects and agents separately and linking directly to the URI from our finding
 # aids and accession records.
 # This will check our subject, geogname, genreform, corpname, famname, and persname elements in our EADs for a ref attribute
@@ -66,7 +71,7 @@ class BHLEADConverter < EADConverter
            end
         end
      end
-    
+
     with 'origination/corpname' do
         if att('ref')
             set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
@@ -74,9 +79,9 @@ class BHLEADConverter < EADConverter
             make_corp_template(:role => 'creator')
         end
     end
-    
+
     with 'controlaccess/corpname' do
-    
+
         corpname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
         terms ||= []
         corpname.children.each do |child|
@@ -111,7 +116,7 @@ class BHLEADConverter < EADConverter
                 terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
             end
         end
-        
+
         if att('ref')
             set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms}
         else
@@ -126,7 +131,7 @@ class BHLEADConverter < EADConverter
             make_person_template(:role => 'creator')
         end
     end
-    
+
     with 'controlaccess/persname' do
         persname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
         terms ||= []
@@ -137,7 +142,7 @@ class BHLEADConverter < EADConverter
                 terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
             end
         end
-        
+
         if att('ref')
             set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms}
         else
@@ -277,7 +282,7 @@ end
       physdesc.children.each do |child|
         if child.respond_to?(:name) && child.name == 'extent'
           child_content = child.content.strip
-          if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
+          if extent_number_and_type.nil? && child_content =~ /^([0-9\.,]+)+\s+(.*)$/
             extent_number_and_type = {:number => $1, :extent_type => $2}
           else
             other_extent_data << child_content

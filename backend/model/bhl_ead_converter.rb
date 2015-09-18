@@ -282,7 +282,7 @@ end
       physdesc.children.each do |child|
         if child.respond_to?(:name) && child.name == 'extent'
           child_content = child.content.strip
-          if extent_number_and_type.nil? && child_content =~ /^([0-9\.,]+)+\s+(.*)$/
+          if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
             extent_number_and_type = {:number => $1, :extent_type => $2}
           else
             other_extent_data << child_content

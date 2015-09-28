@@ -215,28 +215,6 @@ with 'unitdate' do |node|
    end
  end
 
- with 'dimensions' do |node|
-     next ignore if @ignore
-     unless context == :note_orderedlist
-     content = inner_xml.tap {|xml|
-       xml.sub!(/<head>.*?<\/head>/m, '')
-       # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
-       # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
-     }
-
-     make :note_multipart, {
-       :type => node.name,
-       :persistent_id => att('id'),
-       :subnotes => {
-         'jsonmodel_type' => 'note_text',
-         'content' => format_content( content )
-       }
-     } do |note|
-       set ancestor(:resource, :archival_object), :notes, note
-     end
- end
-end
-
  %w(accessrestrict accessrestrict/legalstatus \
    accruals acqinfo altformavail appraisal arrangement \
    bioghist custodhist \
@@ -264,37 +242,52 @@ end
 end
 
 
-
-# The stock EAD importer imports all extents as portion = "whole"
-# We have some partial extents that we want the importer to import as portion = "part"
+# The stock EAD importer doesn't import <physfacet> and <dimensions> tags into extent objects; instead making them notes
+# This is a corrected version
  with 'physdesc' do
      next ignore if @ignore
-      portion = att('altrender') || 'whole' # We want the EAD importer to know when we're importing partial extents, which we indicator via the altrender attribute
       physdesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
       extent_number_and_type = nil
+      dimensions = nil
+      physfacet = nil
       other_extent_data = []
       make_note_too = false
+      
+      # We want the EAD importer to know when we're importing partial extents, which following ASpace practice is indicated by "altrender" attribute
+      portion = att('altrender') || 'whole' 
+      
       physdesc.children.each do |child|
-        if child.respond_to?(:name) && child.name == 'extent'
+        if child.name == 'extent'
           child_content = child.content.strip
           if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
             extent_number_and_type = {:number => $1, :extent_type => $2}
           else
             other_extent_data << child_content
           end
+
+        elsif child.name == 'physfacet'
+          child_content = child.content.strip
+          physfacet = child_content
+
+        elsif child.name == 'dimensions'
+          child_content = child.content.strip
+          dimensions = child_content
+
         else
           # there's other info here; make a note as well
           make_note_too = true unless child.text.strip.empty?
         end
       end
 
-      # only make an extent if we got a number and type
+      # only make an extent if we got a number and type, otherwise put all physdesc contents into a note
       if extent_number_and_type
         make :extent, {
           :number => $1,
           :extent_type => $2,
           :portion => portion,
-          :container_summary => other_extent_data.join('; ')
+          :container_summary => other_extent_data.join('; '),
+          :physical_details => physfacet,
+          :dimensions => dimensions
         } do |extent|
           set ancestor(:resource, :archival_object), :extents, extent
         end
@@ -312,7 +305,15 @@ end
           set ancestor(:resource, :archival_object), :notes, note
         end
       end
+    end
 
+    # overwriting the default dimensions and physfacet functionality
+    with "dimensions" do
+      next
+    end
+
+    with "physfacet" do
+      next
     end
 
 =begin

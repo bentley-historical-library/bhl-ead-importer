@@ -422,22 +422,21 @@ with 'dao' do
 
 # This forms a date string using the parent archival object's date expression,
 # or its begin date - end date, or just it's begin date, if any exist
-  daodate = ''
+  daodates = []
   ancestor(:archival_object) do |aod|
     if aod.dates && aod.dates.length > 0
       aod.dates.each do |dl|
         if dl['expression'].length > 0
-          daodate += ', ' if daodate.length > 0
-          daodate += dl['expression']
+          daodates << dl['expression']
         else
-          daodate = nil
+          daodates = nil
         end
       end
     end
   end
 
   title = daotitle
-  date_label = daodate if daodate.length > 0
+  date_label = daodates.join(', ') if daodates.length > 0
 
 # This forms a display string using the parent archival object's title and date (if both exist),
 # or just its title or date (if only one exists)

@@ -22,12 +22,15 @@ class BHLEADConverter < EADConverter
     "Convert EAD To ArchivesSpace JSONModel records"
   end
 
+  # Override the stock ArchivesSpace functionality for this function so only replace p tags that are not nested in blockquotes
   def format_content(content)
+  super
   	return content if content.nil?
     content.delete!("\n") # first we remove all linebreaks, since they're probably unintentional
-    content.gsub("<p>","").gsub("</p>","\n\n" ).gsub("<p/>","\n\n")
-  		   .gsub("<lb/>", "\n\n").gsub("<lb>","\n\n").gsub("</lb>","").gsub(/[\s,]+$/,"") # also remove trailing commas
+    content.gsub(/(?<!<blockquote>)<p>/,"").gsub(/<\/p>(?!<\/blockquote>)/,"\n\n" ).gsub("<p/>","\n\n")
+  		   .gsub("<lb/>", "\n\n").gsub("<lb>","\n\n").gsub("</lb>","").gsub(/[\s,]+$/,"") # Also remove trailing commas and spaces
   	     .strip
+         #.gsub(/[\s,]+$/,"")
   end
 
 

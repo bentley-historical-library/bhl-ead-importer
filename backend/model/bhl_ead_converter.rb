@@ -43,7 +43,7 @@ class BHLEADConverter < EADConverter
 # So, we need to tell the importer to skip those things only when they appear in places where they shouldn't, otherwise do
 # it's normal thing
 
-%w(abstract langmaterial materialspec physloc).each do |note|
+%w(abstract langmaterial materialspec physfacet physloc).each do |note|
       with note do |node|
         next if context == :note_orderedlist # skip these
         next if context == :items # these too
@@ -224,117 +224,77 @@ with 'list' do
 
 # The stock EAD importer doesn't import <physfacet> and <dimensions> tags into extent objects; instead making them notes
 # This is a corrected version
+ with 'physdesc' do
+      next if context == :note_orderedlist # skip these
+      physdesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
+      extent_number_and_type = nil
+      dimensions = nil
+      physfacet = nil
+      other_extent_data = []
+      make_note_too = false
 
-# first, some methods for generating note objects
-def make_single_note(note_name, tag)
-  content = tag.to_xml
-  make :note_singlepart, {
-    :type => note_name,
-    :persistent_id => att('id'),
-    :content => format_content( content.sub(/<head>.?<\/head>/, '').strip)
-  } do |note|
-    set ancestor(:resource, :archival_object), :notes, note
-  end
-end
+      # We want the EAD importer to know when we're importing partial extents, which following ASpace practice is indicated by "altrender" attribute
+      portion = att('altrender') || 'whole'
 
-def make_nested_note(note_name, tag)
-  content = tag.to_xml
+      physdesc.children.each do |child|
+        if child.name == 'extent'
+          child_content = child.content.strip
+          if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
+            extent_number_and_type = {:number => $1, :extent_type => $2}
+          else
+            other_extent_data << child_content
+          end
 
-  make :note_multipart, {
-    :type => note_name,
-    :persistent_id => att('id'),
-    :subnotes => {
-      'jsonmodel_type' => 'note_text',
-      'content' => format_content( content )
-    }
-  } do |note|
-    set ancestor(:resource, :archival_object), :notes, note
-  end
-end
+        elsif child.name == 'physfacet'
+          child_content = child.content.strip
+          physfacet = child_content
 
-with 'physdesc' do
-  next if context == :note_orderedlist # skip these
-  physdesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
+        elsif child.name == 'dimensions'
+          child_content = child.content.strip
+          dimensions = child_content
 
-  extent_number_and_type = nil
-
-  dimensions = []
-  physfacets = []
-  container_summaries = []
-  other_extent_data = []
-
-  container_summary_texts = []
-  dimensions_texts = []
-  physfacet_texts = []
-
-  # If there is already a portion specified, use it
-  portion = att('altrender') || 'whole'
-
-  physdesc.children.each do |child|
-    # "extent" can have one of two kinds of semantic meanings: either a true extent with number and type,
-    # or a container summary. Disambiguation is done through a regex.
-    if child.name == 'extent'
-      child_content = child.content.strip
-      if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
-        extent_number_and_type = {:number => $1, :extent_type => $2}
-      else
-        container_summaries << child
-        container_summary_texts << child.content.strip
+        else
+          # there's other info here; make a note as well
+          make_note_too = true unless child.text.strip.empty?
+        end
       end
 
-    elsif child.name == 'physfacet'
-      physfacets << child
-      physfacet_texts << child.content.strip
+      # only make an extent if we got a number and type, otherwise put all physdesc contents into a note
+      if extent_number_and_type
+        make :extent, {
+          :number => $1,
+          :extent_type => $2,
+          :portion => portion,
+          :container_summary => other_extent_data.join('; '),
+          :physical_details => physfacet,
+          :dimensions => dimensions
+        } do |extent|
+          set ancestor(:resource, :archival_object), :extents, extent
+        end
+      else
+        make_note_too = true;
+      end
 
-    elsif child.name == 'dimensions'
-      dimensions << child
-      dimensions_texts << child.content.strip
-    
-    else
-      other_extent_data << child
+      if make_note_too
+        content =  physdesc.to_xml(:encoding => 'utf-8')
+        make :note_singlepart, {
+          :type => 'physdesc',
+          :persistent_id => att('id'),
+          :content => format_content( content.sub(/<head>.*?<\/head>/, '').strip )
+        } do |note|
+          set ancestor(:resource, :archival_object), :notes, note
+        end
+      end
     end
-  end
 
-  # only make an extent if we got a number and type, otherwise put all remaining physdesc contents into individual notes
-  if extent_number_and_type
-    make :extent, {
-      :number => $1,
-      :extent_type => $2,
-      :portion => portion,
-      :container_summary => container_summary_texts.join('; '),
-      :physical_details => physfacet_texts.join('; '),
-      :dimensions => dimensions_texts.join('; ')
-    } do |extent|
-      set ancestor(:resource, :archival_object), :extents, extent
+    # overwriting the default dimensions and physfacet functionality
+    with "dimensions" do
+      next
     end
 
-  # there's no true extent; split up the rest into individual notes
-  else
-    # container_summaries.each do |summary|
-    #   make_single_note("physdesc", summary)
-    # end
-    #
-    physfacets.each do |physfacet|
-      make_single_note("physfacet", physfacet)
+    with "physfacet" do
+      next
     end
-    #
-    dimensions.each do |dimension|
-      make_nested_note("dimensions", dimension)
-    end
-  end
-  # other_extent_data.each do |unknown_tag|
-  #   make_single_note("physdesc", unknown_tag)
-  # end
-end
-
-# overwriting the default dimensions and physfacet functionality
-with "dimensions" do
-  next
-end
-
-with "physfacet" do
-  next
-end
 
 # END PHYSDESC CUSTOMIZATIONS
 

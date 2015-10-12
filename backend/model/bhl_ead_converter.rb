@@ -43,7 +43,7 @@ class BHLEADConverter < EADConverter
 # So, we need to tell the importer to skip those things only when they appear in places where they shouldn't, otherwise do
 # it's normal thing
 
-%w(abstract langmaterial materialspec physfacet physloc).each do |note|
+%w(abstract langmaterial materialspec physloc).each do |note|
       with note do |node|
         next if context == :note_orderedlist # skip these
         next if context == :items # these too
@@ -224,77 +224,123 @@ with 'list' do
 
 # The stock EAD importer doesn't import <physfacet> and <dimensions> tags into extent objects; instead making them notes
 # This is a corrected version
- with 'physdesc' do
-      next if context == :note_orderedlist # skip these
-      physdesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
-      extent_number_and_type = nil
-      dimensions = nil
-      physfacet = nil
-      other_extent_data = []
-      make_note_too = false
 
-      # We want the EAD importer to know when we're importing partial extents, which following ASpace practice is indicated by "altrender" attribute
-      portion = att('altrender') || 'whole'
+# first, some methods for generating note objects
 
-      physdesc.children.each do |child|
-        if child.name == 'extent'
-          child_content = child.content.strip
-          if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
-            extent_number_and_type = {:number => $1, :extent_type => $2}
-          else
-            other_extent_data << child_content
-          end
+def make_single_note(note_name, tag, tag_name="")
+  content = tag.inner_text
+  if !tag_name.empty?
+    content = tag_name + ": " + content
+  end
+  make :note_singlepart, {
+    :type => note_name,
+    :persistent_id => att('id'),
+    :content => format_content( content.sub(/<head>.?<\/head>/, '').strip)
+  } do |note|
+    set ancestor(:resource, :archival_object), :notes, note
+  end
+end
 
-        elsif child.name == 'physfacet'
-          child_content = child.content.strip
-          physfacet = child_content
+def make_nested_note(note_name, tag)
+  content = tag.inner_text
 
-        elsif child.name == 'dimensions'
-          child_content = child.content.strip
-          dimensions = child_content
+  make :note_multipart, {
+    :type => note_name,
+    :persistent_id => att('id'),
+    :subnotes => {
+      'jsonmodel_type' => 'note_text',
+      'content' => format_content( content )
+    }
+  } do |note|
+    set ancestor(:resource, :archival_object), :notes, note
+  end
+end
 
-        else
-          # there's other info here; make a note as well
-          make_note_too = true unless child.text.strip.empty?
-        end
-      end
+with 'physdesc' do
+  next if context == :note_orderedlist # skip these
+  physdesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
 
-      # only make an extent if we got a number and type, otherwise put all physdesc contents into a note
-      if extent_number_and_type
-        make :extent, {
-          :number => $1,
-          :extent_type => $2,
-          :portion => portion,
-          :container_summary => other_extent_data.join('; '),
-          :physical_details => physfacet,
-          :dimensions => dimensions
-        } do |extent|
-          set ancestor(:resource, :archival_object), :extents, extent
-        end
+  extent_number_and_type = nil
+
+  dimensions = []
+  physfacets = []
+  container_summaries = []
+  other_extent_data = []
+
+  container_summary_texts = []
+  dimensions_texts = []
+  physfacet_texts = []
+
+  # If there is already a portion specified, use it
+  portion = att('altrender') || 'whole'
+
+  physdesc.children.each do |child|
+    # "extent" can have one of two kinds of semantic meanings: either a true extent with number and type,
+    # or a container summary. Disambiguation is done through a regex.
+    if child.name == 'extent'
+      child_content = child.content.strip
+      if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
+        extent_number_and_type = {:number => $1, :extent_type => $2}
       else
-        make_note_too = true;
+        container_summaries << child
+        container_summary_texts << child.content.strip
       end
 
-      if make_note_too
-        content =  physdesc.to_xml(:encoding => 'utf-8')
-        make :note_singlepart, {
-          :type => 'physdesc',
-          :persistent_id => att('id'),
-          :content => format_content( content.sub(/<head>.*?<\/head>/, '').strip )
-        } do |note|
-          set ancestor(:resource, :archival_object), :notes, note
-        end
-      end
+    elsif child.name == 'physfacet'
+      physfacets << child
+      physfacet_texts << child.content.strip
+
+    elsif child.name == 'dimensions'
+      dimensions << child
+      dimensions_texts << child.content.strip
+
+    elsif child.name != 'text'
+      other_extent_data << child
+    end
+  end
+
+  # only make an extent if we got a number and type, otherwise put all physdesc contents into a note
+  if extent_number_and_type
+    make :extent, {
+      :number => $1,
+      :extent_type => $2,
+      :portion => portion,
+      :container_summary => container_summary_texts.join('; '),
+      :physical_details => physfacet_texts.join('; '),
+      :dimensions => dimensions_texts.join('; ')
+    } do |extent|
+      set ancestor(:resource, :archival_object), :extents, extent
     end
 
-    # overwriting the default dimensions and physfacet functionality
-    with "dimensions" do
-      next
+  # there's no true extent; split up the rest into individual notes
+  else
+    container_summaries.each do |summary|
+      make_single_note("physdesc", summary)
     end
 
-    with "physfacet" do
-      next
+    physfacets.each do |physfacet|
+      make_single_note("physfacet", physfacet)
     end
+    #
+    dimensions.each do |dimension|
+      make_nested_note("dimensions", dimension)
+    end
+  end
+
+  other_extent_data.each do |unknown_tag|
+    make_single_note("physdesc", unknown_tag, unknown_tag.name)
+  end
+
+end
+
+# overwriting the default dimensions and physfacet functionality
+with "dimensions" do
+  next
+end
+
+with "physfacet" do
+  next
+end
 
 # END PHYSDESC CUSTOMIZATIONS
 
@@ -476,7 +522,6 @@ end
 =begin
 # Note: The following bits are here for historical reasons
 # We have either decided against implementing the functionality OR the ArchivesSpace importer has changed, deprecating the following customizations
-
 #BEGIN IGNORE
 # Setting some of these to ignore because we have some physdesc, container, etc.
 # Within list/items in our descgrps at the end of finding aids.
@@ -489,31 +534,24 @@ end
 with 'archref/container' do
     @ignore = true
 end
-
 with 'archref/physdesc/dimensions' do
     @ignore = true
 end
-
 with 'archref/unittitle' do
     @ignore = true
 end
-
 with 'archref/unittitle/unitdate' do
     @ignore = true
 end
-
 with 'archref/note' do
     @ignore = true
 end
-
 with 'archref/note/p/unitdate' do
     @ignore = true
 end
-
 with 'archref/note/p/geogname' do
     @ignore = true
 end
-
 with 'unittitle' do |node|
     ancestor(:note_multipart, :resource, :archival_object) do |obj|
       unless obj.class.record_type == "note_multipart" or context == "note_orderedlist"
@@ -523,7 +561,6 @@ with 'unittitle' do |node|
       end
     end
   end
-
 with 'unitdate' do |node|
   next ignore if @ignore
    norm_dates = (att('normal') || "").sub(/^\s/, '').sub(/\s$/, '').split('/')
@@ -531,7 +568,6 @@ with 'unitdate' do |node|
      norm_dates[1] = norm_dates[0]
    end
    norm_dates.map! {|d| d =~ /^([0-9]{4}(\-(1[0-2]|0[1-9])(\-(0[1-9]|[12][0-9]|3[01]))?)?)$/ ? d : nil}
-
    make :date, {
      :date_type => att('type') || 'inclusive',
      :expression => inner_xml,
@@ -545,7 +581,6 @@ with 'unitdate' do |node|
      set ancestor(:resource, :archival_object), :dates, date
    end
  end
-
  with 'dimensions' do |node|
      next ignore if @ignore
      unless context == :note_orderedlist
@@ -554,7 +589,6 @@ with 'unitdate' do |node|
        # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
        # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
      }
-
      make :note_multipart, {
        :type => node.name,
        :persistent_id => att('id'),
@@ -567,7 +601,6 @@ with 'unitdate' do |node|
      end
  end
 end
-
  %w(accessrestrict accessrestrict/legalstatus \
    accruals acqinfo altformavail appraisal arrangement \
    bioghist custodhist \
@@ -580,7 +613,6 @@ end
       # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
       # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
     }
-
     make :note_multipart, {
       :type => node.name,
       :persistent_id => att('id'),
@@ -593,11 +625,9 @@ end
     end
   end
 end
-
 #BEGIN RIGHTS STATEMENTS
 # The stock ASpace EAD importer only makes "Conditions Governing Access" notes out of <accessrestrict> tags
 # We want to also import our <accessrestrict> tags that have a restriction end date as a "Rights Statements"
-
 # Let ArchivesSpace do its normal thing with accessrestrict
     %w(accessrestrict accessrestrict/legalstatus \
        accruals acqinfo altformavail appraisal arrangement \
@@ -611,7 +641,6 @@ end
           # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
           # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
         }
-
         make :note_multipart, {
           :type => node.name,
           :persistent_id => att('id'),
@@ -624,7 +653,6 @@ end
         end
       end
     end
-
 # Now make a Rights Statement using the content from the "Conditions Governing Access" note
 # and the restriction end date from the accessrestrict/date
 with 'accessrestrict/date' do

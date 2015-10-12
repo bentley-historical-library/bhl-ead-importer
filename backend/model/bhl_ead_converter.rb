@@ -226,8 +226,12 @@ with 'list' do
 # This is a corrected version
 
 # first, some methods for generating note objects
-def make_single_note(note_name, tag)
+
+def make_single_note(note_name, tag, tag_name="")
   content = tag.inner_text
+  if !tag_name.empty?
+    content = tag_name + ": " + content
+  end
   make :note_singlepart, {
     :type => note_name,
     :persistent_id => att('id'),
@@ -289,13 +293,13 @@ with 'physdesc' do
     elsif child.name == 'dimensions'
       dimensions << child
       dimensions_texts << child.content.strip
-    
-    else
+
+    elsif child.name != 'text'
       other_extent_data << child
     end
   end
 
-  # only make an extent if we got a number and type, otherwise put all remaining physdesc contents into individual notes
+  # only make an extent if we got a number and type, otherwise put all physdesc contents into a note
   if extent_number_and_type
     make :extent, {
       :number => $1,
@@ -310,10 +314,10 @@ with 'physdesc' do
 
   # there's no true extent; split up the rest into individual notes
   else
-    # container_summaries.each do |summary|
-    #   make_single_note("physdesc", summary)
-    # end
-    #
+    container_summaries.each do |summary|
+      make_single_note("physdesc", summary)
+    end
+
     physfacets.each do |physfacet|
       make_single_note("physfacet", physfacet)
     end
@@ -322,9 +326,11 @@ with 'physdesc' do
       make_nested_note("dimensions", dimension)
     end
   end
-  # other_extent_data.each do |unknown_tag|
-  #   make_single_note("physdesc", unknown_tag)
-  # end
+
+  other_extent_data.each do |unknown_tag|
+    make_single_note("physdesc", unknown_tag, unknown_tag.name)
+  end
+
 end
 
 # overwriting the default dimensions and physfacet functionality

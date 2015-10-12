@@ -227,7 +227,7 @@ with 'list' do
 
 # first, some methods for generating note objects
 def make_single_note(note_name, tag)
-  content = tag.to_xml
+  content = tag.inner_text
   make :note_singlepart, {
     :type => note_name,
     :persistent_id => att('id'),
@@ -238,7 +238,7 @@ def make_single_note(note_name, tag)
 end
 
 def make_nested_note(note_name, tag)
-  content = tag.to_xml
+  content = tag.inner_text
 
   make :note_multipart, {
     :type => note_name,

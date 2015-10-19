@@ -22,20 +22,55 @@ class BHLEADConverter < EADConverter
     "Convert EAD To ArchivesSpace JSONModel records"
   end
 
-  # Override the stock ArchivesSpace functionality for this function so only replace p tags that are not nested in blockquotes
   def format_content(content)
-  super
-  	return content if content.nil?
-    content.delete!("\n") # first we remove all linebreaks, since they're probably unintentional
-    content.gsub(/(?<!<blockquote>)<p>/,"").gsub(/<\/p>(?!<\/blockquote>)/,"\n\n" ).gsub("<p/>","\n\n")
-  		   .gsub("<lb/>", "\n\n").gsub("<lb>","\n\n").gsub("</lb>","").gsub(/[\s,]+$/,"") # Also remove trailing commas and spaces
-  	     .strip
-         #.gsub(/[\s,]+$/,"")
+    super.gsub(/[, ]+$/,"") # Remove trailing commas and spaces
   end
 
 
   def self.configure
     super
+    
+    
+# BEGIN BLOCKQUOTE P TAG FIX
+# The ArchivesSpace EAD importer replaces all <p> tags with double line breaks
+# This leads to too many line breaks surrounding closing block quote tags
+# On export, this invalidates the EAD
+# The following code is really hacky workaround to swap out blockquote <p> tags and then put them back
+# Note: We only have blockquotes in bioghists and scopecontents, so call preserve_blockquote_p on just this block is sufficient
+
+    def preserve_blockquote_p(content)
+        new_content = content.gsub("<blockquote><p>","<blockquote><q>").gsub("</p></blockquote>","</q></blockquote>")
+        content = format_content(new_content)
+        content.gsub("<q>","<p>").gsub("</q>","</p>")
+    end
+    
+    %w(accessrestrict accessrestrict/legalstatus \
+       accruals acqinfo altformavail appraisal arrangement \
+       bioghist custodhist dimensions \
+       fileplan odd otherfindaid originalsloc phystech \
+       prefercite processinfo relatedmaterial scopecontent \
+       separatedmaterial userestrict ).each do |note|
+      with note do |node|
+        content = inner_xml.tap {|xml|
+          xml.sub!(/<head>.*?<\/head>/m, '')
+          # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
+          # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
+        }
+
+        make :note_multipart, {
+          :type => node.name,
+          :persistent_id => att('id'),
+          :subnotes => {
+            'jsonmodel_type' => 'note_text',
+            'content' => preserve_blockquote_p( content )
+          }
+        } do |note|
+          set ancestor(:resource, :archival_object), :notes, note
+        end
+      end      
+    end
+
+# END BLOCKQUOTE P TAG FIX
 
 # BEGIN CONDITIONAL SKIPS
 

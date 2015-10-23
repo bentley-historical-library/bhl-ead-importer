@@ -380,6 +380,57 @@ end
 # END PHYSDESC CUSTOMIZATIONS
 
 
+# BEGIN LANGUAGE CUSTOMIZATIONS
+# By default, ASpace just uses the last <language> tag it finds as the primary 
+# language of the material described. This results in incorrect finding-aid languages for many eads.
+
+# for example, ead with the following <langmaterial> tag:
+
+## <langmaterial>
+##   The material is mostly in <language langcode="eng" encodinganalog="041">English</language>; 
+##   some correspondence is in <language langcode="arm" encodinganalog="041">Armenian;</language>; 
+##   select items are in <language langcode="ger" encodinganalog="041">German</language>.
+## </langmaterial>
+
+# will result in a primary material language of German.
+
+# these changes fix that
+
+with "langmaterial" do
+  # first, assign the primary language to the ead
+  langmaterial = Nokogiri::XML::DocumentFragment.parse(inner_xml)
+  langmaterial.children.each do |child|
+    if child.name == 'language'
+      set ancestor(:resource, :archival_object), :language, child.attr("langcode")
+      break
+    end
+  end
+
+  # write full tag content to a note, subbing out the language tags
+  content = inner_xml
+  next if content =~ /\A<language langcode=\"[a-z]+\"\/>\Z/
+
+  if content.match(/\A<language langcode=\"[a-z]+\"\s*>([^<]+)<\/language>\Z/)
+    content = $1
+  end
+
+  make :note_singlepart, {
+    :type => "langmaterial",
+    :persistent_id => att('id'),
+    :content => format_content( content.sub(/<head>.*?<\/head>/, '') )
+  } do |note|
+    set ancestor(:resource, :archival_object), :notes, note
+  end
+end
+
+# overwrite the default langusage tag behavior
+with "language" do
+  next
+end
+
+# END LANGUAGE CUSTOMIZATIONS
+
+
 # BEGIN INDEX CUSTOMIZATIONS
 
 # The stock EAD converter creates separate index items for each indexentry,

@@ -597,6 +597,48 @@ end
 
 # END DAO TITLE CUSTOMIZATIONS
 
+# BEGIN DESCGRP/ODD CUSTOMIZATIONS
+
+with 'descgrp/odd' do |node|
+    content = inner_xml
+    make :note_multipart, {
+        :type => 'odd',
+        :persistent_id => att('id'),
+        :subnotes => {
+            'jsonmodel_type' => 'note_text',
+            'content' => format_content( content )
+        }
+    } do |note|
+    set ancestor(:resource), :notes, note
+end
+end
+
+%w(accessrestrict accessrestrict/legalstatus \
+     accruals acqinfo altformavail appraisal arrangement \
+     bioghist custodhist dimensions \
+     fileplan odd otherfindaid originalsloc phystech \
+     prefercite processinfo relatedmaterial scopecontent \
+     separatedmaterial userestrict ).each do |note|
+    with note do |node|
+      next if node.name == 'odd' && ancestor(:resource)
+      content = inner_xml.tap {|xml|
+        xml.sub!(/<head>.*?<\/head>/m, '')
+        # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
+        # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
+      }
+
+      make :note_multipart, {
+        :type => node.name,
+        :persistent_id => att('id'),
+        :subnotes => {
+          'jsonmodel_type' => 'note_text',
+          'content' => format_content( content )
+        }
+      } do |note|
+        set ancestor(:resource, :archival_object), :notes, note
+      end
+    end
+  end
 
 
 

@@ -29,8 +29,8 @@ class BHLEADConverter < EADConverter
 
   def self.configure
     super
-    
-    
+
+
 # BEGIN BLOCKQUOTE P TAG FIX
 # The ArchivesSpace EAD importer replaces all <p> tags with double line breaks
 # This leads to too many line breaks surrounding closing block quote tags
@@ -43,7 +43,7 @@ class BHLEADConverter < EADConverter
         content = format_content(new_content)
         content.gsub("<q>","<p>").gsub("</q>","</p>")
     end
-    
+
     %w(accessrestrict accessrestrict/legalstatus \
        accruals acqinfo altformavail appraisal arrangement \
        bioghist custodhist dimensions \
@@ -67,7 +67,7 @@ class BHLEADConverter < EADConverter
         } do |note|
           set ancestor(:resource, :archival_object), :notes, note
         end
-      end      
+      end
     end
 
 # END BLOCKQUOTE P TAG FIX
@@ -381,14 +381,14 @@ end
 
 
 # BEGIN LANGUAGE CUSTOMIZATIONS
-# By default, ASpace just uses the last <language> tag it finds as the primary 
+# By default, ASpace just uses the last <language> tag it finds as the primary
 # language of the material described. This results in incorrect finding-aid languages for many eads.
 
 # for example, ead with the following <langmaterial> tag:
 
 ## <langmaterial>
-##   The material is mostly in <language langcode="eng" encodinganalog="041">English</language>; 
-##   some correspondence is in <language langcode="arm" encodinganalog="041">Armenian;</language>; 
+##   The material is mostly in <language langcode="eng" encodinganalog="041">English</language>;
+##   some correspondence is in <language langcode="arm" encodinganalog="041">Armenian;</language>;
 ##   select items are in <language langcode="ger" encodinganalog="041">German</language>.
 ## </langmaterial>
 
@@ -543,12 +543,10 @@ end
 with 'dao' do
 
 # This forms a title string using the parent archival object's title, if it exists
-  daotitle = ''
+  daotitle = nil
   ancestor(:archival_object ) do |ao|
-    if ao.title
-      daotitle << ao.title
-    else
-      daotitle = nil
+    if ao.title && ao.title.length > 0
+      daotitle = ao.title
     end
   end
 
@@ -561,8 +559,6 @@ with 'dao' do
       aod.dates.each do |dl|
         if dl['expression'].length > 0
           daodates << dl['expression']
-        else
-          daodates = nil
         end
       end
     end

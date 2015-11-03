@@ -99,9 +99,13 @@ class BHLEADConverter < EADConverter
         end
       end
     end
+    
 
 with 'list' do
       next if ancestor(:note_index) # skip these
+      next if context == :note_orderedlist # also these
+      next if context == :note_definedlist # yeah these too
+      next if context == :items # one more
       if  ancestor(:note_multipart)
         left_overs = insert_into_subnotes
 	  else
@@ -137,6 +141,23 @@ with 'list' do
 
     end
 
+    
+    with 'list/item' do
+        #next if context == :items
+        # Okay this is another one of those hacky things that work
+        # The problem: we have many items nested within items, like <list><item>First item <list><item>Subitem</item></list></item></list>
+        # This would make one item like:
+        #   First item <list><item>Subitem</item></list>
+        # And another like:
+        #   Subitem
+        # ArchivesSpace lists are flat and do not allow for nesting lists within lists within items within lists within.. (you get the idea)...
+        # Now, it would be nice to have a better way to tell the importer to only account for subitems one time, but there doesn't seem to be
+        # With this modification we can add an attribute of 'skip="true"' to nested items before migration
+        # This will ignore those items, and sub out those invalid attributes when importing the inner xml of the top item
+        next if att('skip')
+        set :items, inner_xml.gsub(/\sskip="true"/,'') if context == :note_orderedlist
+    end
+
 # END CONDITIONAL SKIPS
 
 
@@ -158,7 +179,8 @@ with 'list' do
       'genreform' => 'genre_form',
       'geogname' => 'geographic',
       'occupation' => 'occupation',
-      'subject' => 'topical'
+      'subject' => 'topical',
+      'title' => 'uniform_title', # added title since we have some <title> tags in our controlaccesses
       }.each do |tag, type|
         with "controlaccess/#{tag}" do
           if att('ref')
@@ -193,8 +215,13 @@ with 'list' do
                 terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
             end
         end
+        if att('encodinganalog') == '710'
+            relator = 'ctb'
+        else
+            relator = nil
+        end
         if att('ref')
-            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms}
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms, 'relator' => relator if relator}
         else
             make_corp_template(:role => 'subject')
         end
@@ -218,9 +245,14 @@ with 'list' do
                 terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
             end
         end
-
+        
+        if att('encodinganalog') == '700'
+            relator = 'ctb'
+        else
+            relator = nil
+        end
         if att('ref')
-            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms}
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms, 'relator' => relator if relatorl}
         else
             make_family_template(:role => 'subject')
         end
@@ -244,9 +276,13 @@ with 'list' do
                 terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
             end
         end
-
+        if att('encodinganalog') == '700'
+            relator = 'ctb'
+        else
+            relator = nil
+        end
         if att('ref')
-            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms}
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms, 'relator' => relator if relator}
         else
             make_person_template(:role => 'subject')
         end
@@ -596,49 +632,6 @@ with 'dao' do
 end
 
 # END DAO TITLE CUSTOMIZATIONS
-
-# BEGIN DESCGRP/ODD CUSTOMIZATIONS
-
-with 'descgrp/odd' do |node|
-    content = inner_xml
-    make :note_multipart, {
-        :type => 'odd',
-        :persistent_id => att('id'),
-        :subnotes => {
-            'jsonmodel_type' => 'note_text',
-            'content' => format_content( content )
-        }
-    } do |note|
-    set ancestor(:resource), :notes, note
-end
-end
-
-%w(accessrestrict accessrestrict/legalstatus \
-     accruals acqinfo altformavail appraisal arrangement \
-     bioghist custodhist dimensions \
-     fileplan odd otherfindaid originalsloc phystech \
-     prefercite processinfo relatedmaterial scopecontent \
-     separatedmaterial userestrict ).each do |note|
-    with note do |node|
-      next if node.name == 'odd' && ancestor(:resource)
-      content = inner_xml.tap {|xml|
-        xml.sub!(/<head>.*?<\/head>/m, '')
-        # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
-        # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
-      }
-
-      make :note_multipart, {
-        :type => node.name,
-        :persistent_id => att('id'),
-        :subnotes => {
-          'jsonmodel_type' => 'note_text',
-          'content' => format_content( content )
-        }
-      } do |note|
-        set ancestor(:resource, :archival_object), :notes, note
-      end
-    end
-  end
 
 
 

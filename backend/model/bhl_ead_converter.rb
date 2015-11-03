@@ -143,7 +143,6 @@ with 'list' do
 
     
     with 'list/item' do
-        #next if context == :items
         # Okay this is another one of those hacky things that work
         # The problem: we have many items nested within items, like <list><item>First item <list><item>Subitem</item></list></item></list>
         # This would make one item like:

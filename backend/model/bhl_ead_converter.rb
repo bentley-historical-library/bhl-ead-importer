@@ -143,6 +143,7 @@ with 'list' do
 
     
     with 'list/item' do
+        #next if context == :items
         # Okay this is another one of those hacky things that work
         # The problem: we have many items nested within items, like <list><item>First item <list><item>Subitem</item></list></item></list>
         # This would make one item like:
@@ -214,13 +215,14 @@ with 'list' do
                 terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
             end
         end
+        
+        relator = nil
         if att('encodinganalog') == '710'
             relator = 'ctb'
-        else
-            relator = nil
         end
+        
         if att('ref')
-            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms, 'relator' => relator if relator}
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms, 'relator' => relator}
         else
             make_corp_template(:role => 'subject')
         end
@@ -245,13 +247,13 @@ with 'list' do
             end
         end
         
+        relator = nil
         if att('encodinganalog') == '700'
             relator = 'ctb'
-        else
-            relator = nil
         end
+        
         if att('ref')
-            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms, 'relator' => relator if relatorl}
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms, 'relator' => relator}
         else
             make_family_template(:role => 'subject')
         end
@@ -275,13 +277,14 @@ with 'list' do
                 terms << {'term' => term, 'term_type' => term_type, 'vocabulary' => '/vocabularies/1'}
             end
         end
+        
+        relator = nil
         if att('encodinganalog') == '700'
             relator = 'ctb'
-        else
-            relator = nil
         end
+        
         if att('ref')
-            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms, 'relator' => relator if relator}
+            set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'subject', 'terms' => terms, 'relator' => relator}
         else
             make_person_template(:role => 'subject')
         end

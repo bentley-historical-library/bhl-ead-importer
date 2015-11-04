@@ -152,10 +152,10 @@ with 'list' do
         #   Subitem
         # ArchivesSpace lists are flat and do not allow for nesting lists within lists within items within lists within.. (you get the idea)...
         # Now, it would be nice to have a better way to tell the importer to only account for subitems one time, but there doesn't seem to be
-        # With this modification we can add an attribute of 'skip="true"' to nested items before migration
+        # With this modification we can add an attribute of 'altrender="skip"' to nested items before migration
         # This will ignore those items, and sub out those invalid attributes when importing the inner xml of the top item
-        next if att('skip')
-        set :items, inner_xml.gsub(/\sskip="true"/,'') if context == :note_orderedlist
+        next if att('altrender') == 'skip'
+        set :items, inner_xml.gsub(/\saltrender="skip"/,'') if context == :note_orderedlist
     end
 
 # END CONDITIONAL SKIPS

@@ -77,6 +77,8 @@ class BHLEADConverter < EADConverter
 # We have lists and indexes with all sorts of crazy things, like <container>, <physdesc>, <physloc>, etc. tags within <item>  or <ref> tags
 # So, we need to tell the importer to skip those things only when they appear in places where they shouldn't, otherwise do
 # it's normal thing
+# REMINDER: If using the container management plugin, add the line 'next if context == :note_orderedlist' to "with 'container' do" in
+# the converter_extra_container_values mixin
 
 %w(abstract langmaterial materialspec physloc).each do |note|
       with note do |node|

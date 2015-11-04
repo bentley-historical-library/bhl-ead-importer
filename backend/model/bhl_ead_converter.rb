@@ -179,7 +179,7 @@ with 'list' do
       'geogname' => 'geographic',
       'occupation' => 'occupation',
       'subject' => 'topical',
-      'title' => 'uniform_title', # added title since we have some <title> tags in our controlaccesses
+      'title' => 'uniform_title' # added title since we have some <title> tags in our controlaccesses
       }.each do |tag, type|
         with "controlaccess/#{tag}" do
           if att('ref')

@@ -29,6 +29,80 @@ class BHLEADConverter < EADConverter
 
   def self.configure
     super
+    
+# BEGIN CHRONLIST CUSTOMIZATIONS
+
+# For some reason the stock importer doesn't separate <chronlist>s out of notes like it does with <list>s
+# Like, it includes the mixed content <chronlist> within the note text and also makes a chronological list, duplicating the content
+# The addition of (split_tag = 'chronlist') to the insert_into_subnotes method call here fixes that
+    with 'chronlist' do
+      if  ancestor(:note_multipart)
+        left_overs = insert_into_subnotes(split_tag = 'chronlist')
+      else 
+        left_overs = nil 
+        make :note_multipart, {
+          :type => node.name,
+          :persistent_id => att('id'),
+        } do |note|
+          set ancestor(:resource, :archival_object), :notes, note
+        end
+      end
+      
+      make :note_chronology do |note|
+        set ancestor(:note_multipart), :subnotes, note
+      end
+      
+      # and finally put the leftovers back in the list of subnotes...
+      if ( !left_overs.nil? && left_overs["content"] && left_overs["content"].length > 0 ) 
+        set ancestor(:note_multipart), :subnotes, left_overs 
+      end 
+    end
+
+# END CHRONLIST CUSTOMIZATIONS
+
+    
+# BEGIN BIBLIOGRAPHY CUSTOMIZATIONS
+    
+# Our bibliographies are really more like general notes with paragraphs, lists, etc. We don't have any bibliographies
+# that are simply a collection of <bibref>s, and all of the bibliographies that do have <bibref>s have them inserted into
+# items in lists. This change will import bibliographies as a general note, which is really more appropriate given their content
+    
+    with 'bibliography' do |node|
+      content = inner_xml.tap {|xml|
+          xml.sub!(/<head>.*?<\/head>/m, '')
+          # xml.sub!(/<list [^>]*>.*?<\/list>/m, '')
+          # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
+        }
+
+        make :note_multipart, {
+          :type => 'odd',
+          :persistent_id => att('id'),
+          :subnotes => {
+            'jsonmodel_type' => 'note_text',
+            'content' => preserve_blockquote_p( content )
+          }
+        } do |note|
+          set ancestor(:resource, :archival_object), :notes, note
+        end
+      end
+
+    %w(bibliography index).each do |x|
+      next if x == 'bibliography'
+      with "#{x}/head" do |node|
+        set :label,  format_content( inner_xml )
+      end
+
+      with "#{x}/p" do
+        set :content, format_content( inner_xml )
+      end
+    end
+
+
+    with 'bibliography/bibref' do
+      next
+    end
+
+# END BIBLIOGRAPHY CUSTOMIZATIONS
 
 
 # BEGIN BLOCKQUOTE P TAG FIX
@@ -80,7 +154,7 @@ class BHLEADConverter < EADConverter
 # REMINDER: If using the container management plugin, add the line 'next if context == :note_orderedlist' to "with 'container' do" in
 # the converter_extra_container_values mixin
 
-%w(abstract langmaterial materialspec physloc).each do |note|
+    %w(abstract langmaterial materialspec physloc).each do |note|
       with note do |node|
         next if context == :note_orderedlist # skip these
         next if context == :items # these too
@@ -103,7 +177,7 @@ class BHLEADConverter < EADConverter
     end
     
 
-with 'list' do
+    with 'list' do
       next if ancestor(:note_index) # skip these
       next if context == :note_orderedlist # also these
       next if context == :note_definedlist # yeah these too
@@ -642,7 +716,7 @@ end
 =begin
 # Note: The following bits are here for historical reasons
 # We have either decided against implementing the functionality OR the ArchivesSpace importer has changed, deprecating the following customizations
-#BEGIN IGNORE
+# START IGNORE
 # Setting some of these to ignore because we have some physdesc, container, etc.
 # Within list/items in our descgrps at the end of finding aids.
 # Without setting these to ignore, ASpace both makes the list AND makes separate
@@ -745,7 +819,7 @@ end
     end
   end
 end
-#BEGIN RIGHTS STATEMENTS
+# START RIGHTS STATEMENTS
 # The stock ASpace EAD importer only makes "Conditions Governing Access" notes out of <accessrestrict> tags
 # We want to also import our <accessrestrict> tags that have a restriction end date as a "Rights Statements"
 # Let ArchivesSpace do its normal thing with accessrestrict

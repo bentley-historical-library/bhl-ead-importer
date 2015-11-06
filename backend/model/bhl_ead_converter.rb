@@ -79,7 +79,7 @@ class BHLEADConverter < EADConverter
           :persistent_id => att('id'),
           :subnotes => {
             'jsonmodel_type' => 'note_text',
-            'content' => preserve_blockquote_p( content )
+            'content' => format_content( content )
           }
         } do |note|
           set ancestor(:resource, :archival_object), :notes, note
@@ -88,11 +88,11 @@ class BHLEADConverter < EADConverter
 
     %w(bibliography index).each do |x|
       next if x == 'bibliography'
-      with "#{x}/head" do |node|
+      with "index/head" do |node|
         set :label,  format_content( inner_xml )
       end
 
-      with "#{x}/p" do
+      with "index/p" do
         set :content, format_content( inner_xml )
       end
     end
@@ -100,6 +100,14 @@ class BHLEADConverter < EADConverter
 
     with 'bibliography/bibref' do
       next
+    end
+    
+    with 'bibliography/p' do
+        next
+    end
+    
+    with 'bibliography/head' do
+        next
     end
 
 # END BIBLIOGRAPHY CUSTOMIZATIONS
@@ -109,13 +117,12 @@ class BHLEADConverter < EADConverter
 # The ArchivesSpace EAD importer replaces all <p> tags with double line breaks
 # This leads to too many line breaks surrounding closing block quote tags
 # On export, this invalidates the EAD
-# The following code is really hacky workaround to swap out blockquote <p> tags and then put them back
+# The following code is really hacky workaround to reinsert <p> tags within <blockquote>s
 # Note: We only have blockquotes in bioghists and scopecontents, so call preserve_blockquote_p on just this block is sufficient
 
     def preserve_blockquote_p(content)
-        new_content = content.gsub("<blockquote><p>","<blockquote><q>").gsub("</p></blockquote>","</q></blockquote>")
-        content = format_content(new_content)
-        content.gsub("<q>","<p>").gsub("</q>","</p>")
+        content = format_content(content)
+        content.gsub(/<blockquote>\s+/,"<blockquote><p>").gsub(/\s+<\/blockquote>/,"</p></blockquote")
     end
 
     %w(accessrestrict accessrestrict/legalstatus \

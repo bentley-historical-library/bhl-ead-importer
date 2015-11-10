@@ -29,6 +29,43 @@ class BHLEADConverter < EADConverter
 
   def self.configure
     super
+
+# BEGIN TITLEPROPER CUSTOMIZATIONS
+
+# The stock ArchivesSpace converter uses the format_content method on titleproper, replacing existing <lb/> tags
+# Those tags are currently used to display the titlepage properly in DLXS. The related element, author, does not have format_content
+# applied to it, so we get titlepage's that have some things with line breaks and some things without.
+# This modification just imports the inner_xml of titleproper, preserving those line breaks
+
+  with 'titleproper' do
+      type = att('type')
+      case type
+      when 'filing'
+        set :finding_aid_filing_title, inner_xml
+      else
+        set :finding_aid_title, inner_xml
+      end
+    end
+
+# END TITLEPROPER CUSTOMIZATIONS
+
+# BEGIN CLASSIFICATION CUSTOMIZATIONS
+
+# In our EADs, the most consistent way that MHC and UARP finding aids are identified is via the titlepage/publisher
+# In ArchivesSpace, we will be using Classifications to distinguish between the two
+# This modification will link the resource being created to the appropriate Classification in ArchivesSpace
+
+  with 'titlepage/publisher' do
+    if att('id')
+      classification = att('id')
+      set :classifications, {'ref' => classification}
+    end
+
+  end
+
+
+
+# END CLASSIFICATION CUSTOMIZATIONS
     
 # BEGIN CHRONLIST CUSTOMIZATIONS
 

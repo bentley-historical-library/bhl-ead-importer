@@ -699,55 +699,63 @@ end
 
 with 'dao' do
 
-# This forms a title string using the parent archival object's title, if it exists
-  daotitle = nil
-  ancestor(:archival_object ) do |ao|
-    if ao.title && ao.title.length > 0
-      daotitle = ao.title
+  if att('ref') # A digital object has already been made
+    make :instance, {
+      :instance_type => 'digital_object',
+      :digital_object => {'ref' => att('ref')}
+       } do |instance|
+    set ancestor(:resource, :archival_object), :instances, instance
     end
-  end
+  else # Make a digital object
+    make :instance, {
+      :instance_type => 'digital_object'
+      } do |instance|
+    set ancestor(:resource, :archival_object), :instances, instance
+    end
+    # We'll use either the <dao> title attribute (if it exists) or our display_string (if the title attribute does not exist)
+    # This forms a title string using the parent archival object's title, if it exists
+    daotitle = nil
+    ancestor(:archival_object ) do |ao|
+      if ao.title && ao.title.length > 0
+        daotitle = ao.title
+      end
+    end
 
-# This forms a date string using the parent archival object's date expression,
-# or its begin date - end date, or just it's begin date, if any exist
-# (Actually, we have expressions for all of our dates...let's just use those for simplicities sake)
-  daodates = []
-  ancestor(:archival_object) do |aod|
-    if aod.dates && aod.dates.length > 0
-      aod.dates.each do |dl|
-        if dl['expression'].length > 0
-          daodates << dl['expression']
+    # This forms a date string using the parent archival object's date expression,
+    # or its begin date - end date, or just it's begin date, if any exist
+    # (Actually, we have expressions for all of our dates...let's just use those for the sake of simplicity)
+    daodates = []
+    ancestor(:archival_object) do |aod|
+      if aod.dates && aod.dates.length > 0
+        aod.dates.each do |dl|
+          if dl['expression'].length > 0
+            daodates << dl['expression']
+          end
         end
       end
     end
-  end
 
-  title = daotitle
-  date_label = daodates.join(', ') if daodates.length > 0
+    title = daotitle
+    date_label = daodates.join(', ') if daodates.length > 0
 
-# This forms a display string using the parent archival object's title and date (if both exist),
-# or just its title or date (if only one exists)
-  display_string = title || ''
-  display_string += ', ' if title && date_label
-  display_string += date_label if date_label
+    # This forms a display string using the parent archival object's title and date (if both exist),
+    # or just its title or date (if only one exists)
+    display_string = title || ''
+    display_string += ', ' if title && date_label
+    display_string += date_label if date_label
 
-  make :instance, {
-    :instance_type => 'digital_object'
-    } do |instance|
-  set ancestor(:resource, :archival_object), :instances, instance
-  end
-
-# We'll use either the <dao> title attribute (if it exists) or our display_string (if the title attribute does not exist)
-  make :digital_object, {
-    :digital_object_id => SecureRandom.uuid,
-    :title => att('title') || display_string,
-    } do |obj|
-      obj.file_versions <<  {
-      :use_statement => att('role'),
-      :file_uri => att('href'),
-      :xlink_actuate_attribute => att('actuate'),
-      :xlink_show_attribute => att('show')
-      }
-    set ancestor(:instance), :digital_object, obj
+    make :digital_object, {
+      :digital_object_id => SecureRandom.uuid,
+      :title => att('title') || display_string,
+      } do |obj|
+        obj.file_versions <<  {
+        :use_statement => att('role'),
+        :file_uri => att('href'),
+        :xlink_actuate_attribute => att('actuate'),
+        :xlink_show_attribute => att('show')
+        }
+      set ancestor(:instance), :digital_object, obj
+      end
     end
   end
 end

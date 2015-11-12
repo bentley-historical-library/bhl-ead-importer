@@ -760,6 +760,21 @@ with 'dao' do
   end
 end
 
+    with 'daodesc' do
+
+        ancestor(:digital_object) do |dobj|
+          next if dobj.ref
+        end
+        
+        make :note_digital_object, {
+          :type => 'note',
+          :persistent_id => att('id'),
+          :content => inner_xml.strip
+        } do |note|
+          set ancestor(:digital_object), :notes, note
+        end
+    end
+
 # END DAO TITLE CUSTOMIZATIONS
 
 

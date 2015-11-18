@@ -686,6 +686,28 @@ end
 
 # END INDEX CUSTOMIZATIONS
 
+# BEGIN HEAD CUSTOMIZATIONS
+
+# This issue is similar to the language issue -- if there is a note with multiple <head> elements (say, a bioghist with its own head and sublists with their own heads),
+# the stock importer action is to set the note label to the very last <head> it finds. This modification will only set the label if it does not already exist, ensuring
+# that it will only be set once.
+
+    with 'head' do
+      if context == :note_multipart
+        ancestor(:note_multipart) do |note|
+            next unless note["label"].nil?
+        set :label, format_content( inner_xml )
+        end
+      elsif context == :note_chronology
+        ancestor(:note_chronology) do |note|
+            next unless note["title"].nil?
+        set :title, format_content( inner_xml )
+        end
+      end
+    end
+
+# END HEAD CUSTOMIZATIONS
+
 # BEGIN DAO TITLE CUSTOMIZATIONS
 
 # The Bentley has many EADs with <dao> tags that lack title attributes.

@@ -267,8 +267,8 @@ class BHLEADConverter < EADConverter
         #   Subitem
         # ArchivesSpace lists are flat and do not allow for nesting lists within lists within items within lists within.. (you get the idea)...
         # Now, it would be nice to have a better way to tell the importer to only account for subitems one time, but there doesn't seem to be
-        # With this modification we can add an attribute of 'altrender="skip"' to nested items before migration
-        # This will ignore those items, and sub out those invalid attributes when importing the inner xml of the top item
+        # With this modification we can change nested lists to <sublist> and nested items to <subitem> before migration
+        # That way, the importer will ignore those sublists and subitems and sub out those tags for the correct tags
         set :items, inner_xml.gsub("sublist","list").gsub("subitem","item") if context == :note_orderedlist
     end
 

@@ -1,0 +1,7 @@
+The following are modifications that will need to be made to container_managements/backend/model/mixins/converter_extra_container_values.rb
+Once the container management plugin is fully integrated into the core code, these should be added to bhl_ead_converter
+
+
+1. next if context == :note_orderedlist
+2. Remove .downcase from att("label")
+3. assign type_1 to att('type'), type_2 and type_3 to att('label')

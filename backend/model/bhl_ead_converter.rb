@@ -222,14 +222,11 @@ class BHLEADConverter < EADConverter
     
 
     with 'list' do
-      next if ancestor(:note_index) # skip these
-      next if context == :note_orderedlist # also these
-      next if context == :note_definedlist # yeah these too
-      next if context == :items # one more
+      next if ancestor(:note_index)
       if  ancestor(:note_multipart)
-        left_overs = insert_into_subnotes
-	  else
-        left_overs = nil
+        left_overs = insert_into_subnotes 
+      else 
+        left_overs = nil 
         make :note_multipart, {
           :type => 'odd',
           :persistent_id => att('id'),
@@ -237,9 +234,9 @@ class BHLEADConverter < EADConverter
           set ancestor(:resource, :archival_object), :notes, note
         end
       end
-
-
-      # now let's make the subnote list
+      
+      
+      # now let's make the subnote list 
       type = att('type')
       if type == 'deflist' || (type.nil? && inner_xml.match(/<deflist>/))
         make :note_definedlist do |note|
@@ -252,15 +249,14 @@ class BHLEADConverter < EADConverter
           set ancestor(:note_multipart), :subnotes, note
         end
       end
-
-
+      
+      
       # and finally put the leftovers back in the list of subnotes...
-      if ( !left_overs.nil? && left_overs["content"] && left_overs["content"].length > 0 )
-        set ancestor(:note_multipart), :subnotes, left_overs
-      end
-
+      if ( !left_overs.nil? && left_overs["content"] && left_overs["content"].length > 0 ) 
+        set ancestor(:note_multipart), :subnotes, left_overs 
+      end 
+    
     end
-
     
     with 'list/item' do
         # Okay this is another one of those hacky things that work
@@ -271,10 +267,9 @@ class BHLEADConverter < EADConverter
         #   Subitem
         # ArchivesSpace lists are flat and do not allow for nesting lists within lists within items within lists within.. (you get the idea)...
         # Now, it would be nice to have a better way to tell the importer to only account for subitems one time, but there doesn't seem to be
-        # With this modification we can add an attribute of 'altrender="skip"' to nested items before migration
-        # This will ignore those items, and sub out those invalid attributes when importing the inner xml of the top item
-        next if att('altrender') == 'skip'
-        set :items, inner_xml.gsub(/\saltrender="skip"/,'') if context == :note_orderedlist
+        # With this modification we can change nested lists to <sublist> and nested items to <subitem> before migration
+        # That way, the importer will ignore those sublists and subitems and sub out those tags for the correct tags
+        set :items, inner_xml.gsub("sublist","list").gsub("subitem","item") if context == :note_orderedlist
     end
 
 # END CONDITIONAL SKIPS

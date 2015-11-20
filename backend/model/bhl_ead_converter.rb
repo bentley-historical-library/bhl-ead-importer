@@ -55,15 +55,9 @@ class BHLEADConverter < EADConverter
 # In ArchivesSpace, we will be using Classifications to distinguish between the two
 # This modification will link the resource being created to the appropriate Classification in ArchivesSpace
 
-  with 'titlepage/publisher' do
-    if att('id')
-      classification = att('id')
-      set :classifications, {'ref' => classification}
-    end
-
+  with 'classification' do
+    set :classifications, {'ref' => att('ref')}
   end
-
-
 
 # END CLASSIFICATION CUSTOMIZATIONS
     

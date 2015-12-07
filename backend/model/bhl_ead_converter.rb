@@ -151,8 +151,13 @@ class BHLEADConverter < EADConverter
 # The following code is really hacky workaround to reinsert <p> tags within <blockquote>s
 # Note: We only have blockquotes in bioghists and scopecontents, so call preserve_blockquote_p on just this block is sufficient
 
-    def preserve_blockquote_p(content)
+    def preserve_blockquote_p(content, note)
         content = format_content(content)
+        if note == 'odd'
+          if content =~ /\((.*?)\)/
+            content = $1
+          end
+        end
         content.gsub(/<blockquote>\s+/,"<blockquote><p>").gsub(/\s+<\/blockquote>/,"</p></blockquote")
     end
 
@@ -169,12 +174,13 @@ class BHLEADConverter < EADConverter
           # xml.sub!(/<chronlist [^>]*>.*<\/chronlist>/m, '')
         }
 
+
         make :note_multipart, {
           :type => node.name,
           :persistent_id => att('id'),
           :subnotes => {
             'jsonmodel_type' => 'note_text',
-            'content' => preserve_blockquote_p( content )
+            'content' => preserve_blockquote_p( content, note )
           }
         } do |note|
           set ancestor(:resource, :archival_object), :notes, note

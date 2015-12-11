@@ -154,7 +154,7 @@ class BHLEADConverter < EADConverter
     def preserve_blockquote_p(content, note)
         content = format_content(content)
         if note == 'odd'
-          if content =~ /\((.*?)\)/
+          if content =~ /^\((.*?)\)$/
             content = $1
           end
         end

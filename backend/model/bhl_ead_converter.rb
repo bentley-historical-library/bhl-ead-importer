@@ -30,21 +30,33 @@ class BHLEADConverter < EADConverter
   def self.configure
     super
 
-# BEGIN TITLEPROPER CUSTOMIZATIONS
+# BEGIN TITLEPROPER AND AUTHOR CUSTOMIZATIONS
 
-# The stock ArchivesSpace converter uses the format_content method on titleproper, replacing existing <lb/> tags
-# Those tags are currently used to display the titlepage properly in DLXS. The related element, author, does not have format_content
-# applied to it, so we get titlepage's that have some things with line breaks and some things without.
-# This modification just imports the inner_xml of titleproper, preserving those line breaks
+# The stock ArchivesSpace converter sets the author and titleproper elements each time it finds a titleproper or author elements
+# This means that first creates the elements using titlestmt/author titlestmt/titleproper, and the overwrites the values when it reaches titlepage
+# We want it to use only titlestmt/author and titlestmt/titleproper and ignore any future instances of those elements
 
-  with 'titleproper' do
+
+    with 'titlestmt/titleproper' do
       type = att('type')
       case type
       when 'filing'
-        set :finding_aid_filing_title, inner_xml
+        set :finding_aid_filing_title, format_content( inner_xml )
       else
-        set :finding_aid_title, inner_xml
+        set :finding_aid_title, format_content( inner_xml )
       end
+    end
+
+    with 'titlestmt/author' do
+      set :finding_aid_author, inner_xml
+    end
+
+    with 'titleproper' do
+      next
+    end
+
+    with 'author' do
+      next
     end
 
 # END TITLEPROPER CUSTOMIZATIONS
@@ -154,7 +166,7 @@ class BHLEADConverter < EADConverter
     def preserve_blockquote_p(content, note)
         content = format_content(content)
         if note == 'odd'
-          if content =~ /\((.*?)\)/
+          if content =~ /^\((.*?)\)$/
             content = $1
           end
         end
@@ -648,13 +660,13 @@ with 'indexentry' do
 
   end
 
-	make :note_index_item, {
-	  :type => entry_type,
-	  :value => entry_value,
-	  :reference_text => entry_reference
-	  } do |item|
-	set ancestor(:note_index), :items, item
-	end
+  make :note_index_item, {
+    :type => entry_type,
+    :value => entry_value,
+    :reference_text => entry_reference
+    } do |item|
+  set ancestor(:note_index), :items, item
+  end
 end
 
 # Skip the stock importer actions to avoid confusion/duplication

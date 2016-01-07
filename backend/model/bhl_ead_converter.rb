@@ -165,7 +165,9 @@ class BHLEADConverter < EADConverter
 
     def preserve_blockquote_p(content, note)
         content = format_content(content)
-        if note == 'odd'
+        # Remove parentheses from single-paragraph odds
+        blocks = content.split("\n\n")
+        if note == 'odd' && blocks.length == 1
           if content =~ /^\((.*?)\)$/
             content = $1
           end

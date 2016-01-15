@@ -26,31 +26,46 @@ class BHLEADConverter < EADConverter
     super.gsub(/[, ]+$/,"") # Remove trailing commas and spaces
   end
 
-
   def self.configure
     super
 
 # BEGIN TITLEPROPER AND AUTHOR CUSTOMIZATIONS
 
 # The stock ArchivesSpace converter sets the author and titleproper elements each time it finds a titleproper or author elements
-# This means that first creates the elements using titlestmt/author titlestmt/titleproper, and the overwrites the values when it reaches titlepage
-# We want it to use only titlestmt/author and titlestmt/titleproper and ignore any future instances of those elements
+# This means that it first creates the elements using titlestmt/author and titlestmt/titleproper, and then overwrites the values when it reaches titlepage
+# We want to use the titlepage statements. Changing this to be more explicit about using the statement that we want, and to remove some unwanted linebreaks.
+    
+# The EAD importer ignores titlepage; we need to unignore it
+    with "titlepage" do
+      @ignore = false
+    end
 
-
-    with 'titlestmt/titleproper' do
+    with 'titlepage/titleproper' do
       type = att('type')
+      title_statement = inner_xml.gsub("<lb/>"," <lb/>")
       case type
       when 'filing'
-        set :finding_aid_filing_title, format_content( inner_xml )
+        set :finding_aid_filing_title, title_statement.gsub("<lb/>","").gsub(/\s+/," ").strip
       else
-        set :finding_aid_title, format_content( inner_xml )
+        set :finding_aid_title, title_statement.gsub("<lb/>","").gsub(/\s+/," ").strip
       end
     end
 
-    with 'titlestmt/author' do
-      set :finding_aid_author, inner_xml
+    with 'titlepage/author' do
+      author_statement = inner_xml.gsub("<lb/>"," <lb/>")
+      set :finding_aid_author, author_statement.gsub("<lb/>","").gsub(/\s+/," ").strip
     end
 
+# Skip the titleproper and author statements from titlestmt
+    with 'titlestmt/titleproper' do
+      next
+    end
+
+    with 'titlestmt/author' do
+      next
+    end
+
+# Skip these to override the default ArchiveSpace functionality, which searches for a titleproper or an author anywhere
     with 'titleproper' do
       next
     end

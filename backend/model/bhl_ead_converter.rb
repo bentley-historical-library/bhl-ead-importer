@@ -45,9 +45,9 @@ class BHLEADConverter < EADConverter
       title_statement = inner_xml.gsub("<lb/>"," <lb/>")
       case type
       when 'filing'
-        set :finding_aid_filing_title, title_statement.gsub("<lb/>","").gsub(/\s+/," ").strip
+        set :finding_aid_filing_title, title_statement.gsub("<lb/>","").gsub(/<date>(.*?)<\/date>/,"").gsub(/\s+/," ").strip
       else
-        set :finding_aid_title, title_statement.gsub("<lb/>","").gsub(/\s+/," ").strip
+        set :finding_aid_title, title_statement.gsub("<lb/>","").gsub(/<date(.*?)<\/date>/,"").gsub(/\s+/," ").strip
       end
     end
 
@@ -822,8 +822,6 @@ end
     end
 
 # END DAO TITLE CUSTOMIZATIONS
-
-
 
 
 =begin

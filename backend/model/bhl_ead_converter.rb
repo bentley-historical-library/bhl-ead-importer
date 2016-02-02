@@ -45,9 +45,9 @@ class BHLEADConverter < EADConverter
       title_statement = inner_xml.gsub("<lb/>"," <lb/>")
       case type
       when 'filing'
-        set :finding_aid_filing_title, title_statement.gsub("<lb/>","").gsub(/\s+/," ").strip
+        set :finding_aid_filing_title, title_statement.gsub("<lb/>","").gsub(/<date(.*?)<\/date>/,"").gsub(/\s+/," ").strip
       else
-        set :finding_aid_title, title_statement.gsub("<lb/>","").gsub(/\s+/," ").strip
+        set :finding_aid_title, title_statement.gsub("<lb/>","").gsub(/<date(.*?)<\/date>/,"").gsub(/\s+/," ").strip
       end
     end
 
@@ -303,6 +303,80 @@ class BHLEADConverter < EADConverter
 
 # END CONDITIONAL SKIPS
 
+# BEGIN CONTAINER MODIFICATIONS
+# Skip containers that appear in lists
+# Don't downcase the instance_label
+# Import att('type') as the container type for top containers, att('label') as the container type for subcontainers
+
+# example of a 1:many tag:record relation (1+ <container> => 1 instance with 1 container)
+    with 'container' do
+
+        next if context == :note_orderedlist
+
+        @containers ||= {}
+
+        # we've found that the container has a parent att and the parent is in
+        # our queue
+        if att("parent") && @containers[att('parent')]
+          cont = @containers[att('parent')]
+
+        else
+          # there is not a parent. if there is an id, let's check if there's an
+          # instance before we proceed
+          inst = context == :instance ? context_obj : context_obj.instances.last 
+         
+          # if there are no instances, we need to make a new one.
+          # or, if there is an @id ( but no @parent) we can assume its a new
+          # top level container that will be referenced later, so we need to
+          # make a new instance
+          if ( inst.nil? or  att('id')  )
+            instance_label = att("label") ? att("label") : 'mixed_materials'
+
+            if instance_label =~ /(.*)\s\[([0-9]+)\]$/
+              instance_label = $1
+              barcode = $2
+            end
+
+            make :instance, {
+              :instance_type => instance_label
+            } do |instance|
+              set ancestor(:resource, :archival_object), :instances, instance
+            end
+            
+            inst = context_obj
+          end
+        
+          # now let's check out instance to see if there's a container...
+          if inst.container.nil?
+            make :container do |cont|
+              set inst, :container, cont
+            end
+          end
+
+          # and now finally we get the container. 
+          cont =  inst.container || context_obj
+          cont['barcode_1'] = barcode if barcode
+          cont['container_profile_key'] = att("altrender")
+        end
+
+        # now we fill it in
+        (1..3).to_a.each do |i|
+          next unless cont["type_#{i}"].nil?
+          if i == 1
+            cont["type_#{i}"] = att('type')
+          elsif i == 2 or i == 3
+            cont["type_#{i}"] = att('label')
+          end
+          cont["indicator_#{i}"] = format_content( inner_xml )
+          break
+        end
+        
+        #store it here incase we find it has a parent
+        @containers[att("id")] = cont if att("id")
+
+    end
+
+# END CONTAINER MODIFICATIONS
 
 # BEGIN CUSTOM SUBJECT AND AGENT IMPORTS
 
@@ -822,8 +896,6 @@ end
     end
 
 # END DAO TITLE CUSTOMIZATIONS
-
-
 
 
 =begin

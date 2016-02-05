@@ -29,6 +29,23 @@ class BHLEADConverter < EADConverter
   def self.configure
     super
 
+# BEGIN UNITID CUSTOMIZATIONS
+# Let's take those brackets off of unitids and just add them in the exporter
+
+    with 'unitid' do |node|
+      ancestor(:note_multipart, :resource, :archival_object) do |obj|
+        case obj.class.record_type
+        when 'resource'
+          # inner_xml.split(/[\/_\-\.\s]/).each_with_index do |id, i|
+          #   set receiver, "id_#{i}".to_sym, id
+          # end
+          set obj, :id_0, inner_xml
+        when 'archival_object'
+          set obj, :component_id, inner_xml.gsub("[","").gsub("]","").strip
+        end
+      end
+    end
+
 # BEGIN TITLEPROPER AND AUTHOR CUSTOMIZATIONS
 
 # The stock ArchivesSpace converter sets the author and titleproper elements each time it finds a titleproper or author elements
@@ -176,18 +193,24 @@ class BHLEADConverter < EADConverter
 # This leads to too many line breaks surrounding closing block quote tags
 # On export, this invalidates the EAD
 # The following code is really hacky workaround to reinsert <p> tags within <blockquote>s
-# Note: We only have blockquotes in bioghists and scopecontents, so call preserve_blockquote_p on just this block is sufficient
-
-    def preserve_blockquote_p(content, note)
-        content = format_content(content)
-        # Remove parentheses from single-paragraph odds
-        blocks = content.split("\n\n")
-        if note == 'odd' && blocks.length == 1
+# Note: We only have blockquotes in bioghists and scopecontents, so call modified_format_content on just this block is sufficient
+    
+  # This function calls the regular format_content function, and then does a few other things, like preserving blockquote p tags and removing opening and closing parens from some notes, before returning the content
+    def modified_format_content(content, note)
+      content = format_content(content)
+      # Remove parentheses from single-paragraph odds
+      blocks = content.split("\n\n")
+      if blocks.length == 1
+        case note
+        when 'odd','abstract','accessrestrict','daodesc'
           if content =~ /^\((.*?)\)$/
+            content = $1
+          elsif content =~ /^\[(.*?)\]$/
             content = $1
           end
         end
-        content.gsub(/<blockquote>\s+/,"<blockquote><p>").gsub(/\s+<\/blockquote>/,"</p></blockquote")
+      end
+      content.gsub(/<blockquote>\s+/,"<blockquote><p>").gsub(/\s+<\/blockquote>/,"</p></blockquote")
     end
 
     %w(accessrestrict accessrestrict/legalstatus \
@@ -209,7 +232,7 @@ class BHLEADConverter < EADConverter
           :persistent_id => att('id'),
           :subnotes => {
             'jsonmodel_type' => 'note_text',
-            'content' => preserve_blockquote_p( content, note )
+            'content' => modified_format_content( content, note )
           }
         } do |note|
           set ancestor(:resource, :archival_object), :notes, note
@@ -242,7 +265,7 @@ class BHLEADConverter < EADConverter
         make :note_singlepart, {
           :type => note,
           :persistent_id => att('id'),
-          :content => format_content( content.sub(/<head>.*?<\/head>/, '') )
+          :content => modified_format_content( content.sub(/<head>.*?<\/head>/, ''), note )
         } do |note|
           set ancestor(:resource, :archival_object), :notes, note
         end
@@ -889,7 +912,7 @@ end
         make :note_digital_object, {
           :type => 'note',
           :persistent_id => att('id'),
-          :content => inner_xml.strip
+          :content => modified_format_content(inner_xml.strip,'daodesc')
         } do |note|
           set ancestor(:digital_object), :notes, note
         end

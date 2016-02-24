@@ -230,6 +230,7 @@ class BHLEADConverter < EADConverter
         make :note_multipart, {
           :type => node.name,
           :persistent_id => att('id'),
+          :publish => true,
           :subnotes => {
             'jsonmodel_type' => 'note_text',
             'content' => modified_format_content( content, note )
@@ -251,6 +252,7 @@ class BHLEADConverter < EADConverter
 # the converter_extra_container_values mixin
 
     %w(abstract langmaterial materialspec physloc).each do |note|
+      next if note == "langmaterial"
       with note do |node|
         next if context == :note_orderedlist # skip these
         next if context == :items # these too
@@ -265,6 +267,7 @@ class BHLEADConverter < EADConverter
         make :note_singlepart, {
           :type => note,
           :persistent_id => att('id'),
+          :publish => true,
           :content => modified_format_content( content.sub(/<head>.*?<\/head>/, ''), note )
         } do |note|
           set ancestor(:resource, :archival_object), :notes, note
@@ -282,6 +285,7 @@ class BHLEADConverter < EADConverter
         make :note_multipart, {
           :type => 'odd',
           :persistent_id => att('id'),
+          :publish => true,
         } do |note|
           set ancestor(:resource, :archival_object), :notes, note
         end
@@ -331,7 +335,10 @@ class BHLEADConverter < EADConverter
 # Don't downcase the instance_label
 # Import att('type') as the container type for top containers, att('label') as the container type for subcontainers
 
+
 # example of a 1:many tag:record relation (1+ <container> => 1 instance with 1 container)
+=begin
+
     with 'container' do
 
         next if context == :note_orderedlist
@@ -399,6 +406,7 @@ class BHLEADConverter < EADConverter
 
     end
 
+=end
 # END CONTAINER MODIFICATIONS
 
 # BEGIN CUSTOM SUBJECT AND AGENT IMPORTS
@@ -548,6 +556,7 @@ def make_single_note(note_name, tag, tag_name="")
   make :note_singlepart, {
     :type => note_name,
     :persistent_id => att('id'),
+    :publish => true,
     :content => format_content( content.sub(/<head>.?<\/head>/, '').strip)
   } do |note|
     set ancestor(:resource, :archival_object), :notes, note
@@ -560,6 +569,7 @@ def make_nested_note(note_name, tag)
   make :note_multipart, {
     :type => note_name,
     :persistent_id => att('id'),
+    :publish => true,
     :subnotes => {
       'jsonmodel_type' => 'note_text',
       'content' => format_content( content )
@@ -695,6 +705,7 @@ with "langmaterial" do
   make :note_singlepart, {
     :type => "langmaterial",
     :persistent_id => att('id'),
+    :publish => true,
     :content => format_content( content.sub(/<head>.*?<\/head>/, '') )
   } do |note|
     set ancestor(:resource, :archival_object), :notes, note

@@ -210,7 +210,7 @@ class BHLEADConverter < EADConverter
           end
         end
       end
-      content.gsub(/<blockquote>\s+/,"<blockquote><p>").gsub(/\s+<\/blockquote>/,"</p></blockquote>")
+      content.gsub(/<blockquote>\s+?/,"<blockquote><p>").gsub(/\s+?<\/blockquote>/,"</p></blockquote>")
     end
 
     %w(accessrestrict accessrestrict/legalstatus \

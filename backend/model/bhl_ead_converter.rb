@@ -337,7 +337,7 @@ class BHLEADConverter < EADConverter
 
 
 # example of a 1:many tag:record relation (1+ <container> => 1 instance with 1 container)
-=begin
+
 
     with 'container' do
 
@@ -405,8 +405,6 @@ class BHLEADConverter < EADConverter
         @containers[att("id")] = cont if att("id")
 
     end
-
-=end
 # END CONTAINER MODIFICATIONS
 
 # BEGIN CUSTOM SUBJECT AND AGENT IMPORTS

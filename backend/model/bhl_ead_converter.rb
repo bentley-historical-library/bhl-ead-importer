@@ -316,7 +316,8 @@ class BHLEADConverter < EADConverter
 
     with 'list/head' do |node|
       ancestor(:note_definedlist, :note_orderedlist) do |obj|
-        obj.title = format_content( inner_xml) if obj.title.nil?
+        next if obj.title
+        obj.title = format_content( inner_xml)
       end
     end
     

@@ -332,7 +332,7 @@ class BHLEADConverter < EADConverter
         # Now, it would be nice to have a better way to tell the importer to only account for subitems one time, but there doesn't seem to be
         # With this modification we can change nested lists to <sublist> and nested items to <subitem> before migration
         # That way, the importer will ignore those sublists and subitems and sub out those tags for the correct tags
-        set :items, inner_xml.gsub("<sublist","<list").gsub("<subitem","<item") if context == :note_orderedlist
+        set :items, inner_xml.gsub("<sublist","<list").gsub("<subitem","<item").gsub("</subitem>","</item>").gsub("</sublist>","</list>") if context == :note_orderedlist
     end
 
 # END CONDITIONAL SKIPS

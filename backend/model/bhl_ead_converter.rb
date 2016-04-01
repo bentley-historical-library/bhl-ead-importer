@@ -469,9 +469,12 @@ class BHLEADConverter < EADConverter
             end
         end
         
-        relator = nil
-        if att('encodinganalog') == '710'
+        if att('role')
+            relator = att('role')
+        elsif att('encodinganalog') == '710'
             relator = 'ctb'
+        else
+            relator = nil
         end
         
         if att('ref')
@@ -500,9 +503,12 @@ class BHLEADConverter < EADConverter
             end
         end
         
-        relator = nil
-        if att('encodinganalog') == '700'
+        if att('role')
+            relator = att('role')
+        elsif att('encodinganalog') == '700'
             relator = 'ctb'
+        else
+            relator = nil
         end
         
         if att('ref')
@@ -531,9 +537,12 @@ class BHLEADConverter < EADConverter
             end
         end
         
-        relator = nil
-        if att('encodinganalog') == '700'
+        if att('role')
+            relator = att('role')
+        elsif att('encodinganalog') == '700'
             relator = 'ctb'
+        else
+            relator = nil
         end
         
         if att('ref')

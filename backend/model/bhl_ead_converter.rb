@@ -203,12 +203,9 @@ class BHLEADConverter < EADConverter
       if blocks.length == 1
         case note
         when 'odd','abstract','accessrestrict','daodesc'
-          content = content.gsub(/^[\(\[]+(.*?)[\]\)]+$/,$1)
-          #if content =~ /^\(?(.*?)\)?$/
-            #content = $1
-          #elsif content =~ /^\[?(.*?)\]?$/
-            #content = $1
-          #end
+          if content =~ /^[\[\(]+(.*)[\]\)]+$/
+            content = $1
+          end
         end
       end
       content.gsub(/<blockquote>\s*?/,"<blockquote><p>").gsub(/\s*?<\/blockquote>/,"</p></blockquote>")

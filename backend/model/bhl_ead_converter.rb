@@ -668,14 +668,6 @@ with 'physdesc' do
 
 end
 
-# overwriting the default dimensions and physfacet functionality
-with "dimensions" do
-  next
-end
-
-with "physfacet" do
-  next
-end
 
 # END PHYSDESC CUSTOMIZATIONS
 

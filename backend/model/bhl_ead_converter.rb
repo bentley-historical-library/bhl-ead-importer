@@ -64,7 +64,7 @@ class BHLEADConverter < EADConverter
       when 'filing'
         set :finding_aid_filing_title, title_statement.gsub("<lb/>","").gsub(/<date(.*?)<\/date>/,"").gsub(/\s+/," ").strip
       else
-        set :finding_aid_title, title_statement.gsub("<lb/>","").gsub(/<date(.*?)<\/date>/,"").gsub(/\s+/," ").strip
+        set :finding_aid_title, title_statement.gsub("<lb/>","").gsub(/<date(.*?)<\/date>/,"").gsub(/\s+/," ").gsub(/[,\s]+$/,"").strip
       end
     end
 

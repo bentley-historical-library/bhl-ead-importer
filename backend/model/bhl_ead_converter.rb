@@ -213,7 +213,7 @@ class BHLEADConverter < EADConverter
 
     %w(accessrestrict accessrestrict/legalstatus \
        accruals acqinfo altformavail appraisal arrangement \
-       bioghist custodhist dimensions \
+       bioghist custodhist \
        fileplan odd otherfindaid originalsloc phystech \
        prefercite processinfo relatedmaterial scopecontent \
        separatedmaterial userestrict ).each do |note|
@@ -609,28 +609,34 @@ with 'physdesc' do
   # If there is already a portion specified, use it
   portion = att('altrender') || 'whole'
 
-  physdesc.children.each do |child|
-    # "extent" can have one of two kinds of semantic meanings: either a true extent with number and type,
-    # or a container summary. Disambiguation is done through a regex.
-    if child.name == 'extent'
-      child_content = child.content.strip
-      if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
-        extent_number_and_type = {:number => $1, :extent_type => $2}
-      else
-        container_summaries << child
-        container_summary_texts << child.content.strip
+      # Special case: if the physdesc is just a plain string with no child elements, treat its contents as a physdesc note
+  if physdesc.children.length == 1 && physdesc.children[0].name == 'text'
+        container_summaries << physdesc
+  else
+      # Otherwise, attempt to parse out an extent record from the child elements.
+    physdesc.children.each do |child|
+      # "extent" can have one of two kinds of semantic meanings: either a true extent with number and type,
+      # or a container summary. Disambiguation is done through a regex.
+      if child.name == 'extent'
+        child_content = child.content.strip
+        if extent_number_and_type.nil? && child_content =~ /^([0-9\.]+)+\s+(.*)$/
+          extent_number_and_type = {:number => $1, :extent_type => $2}
+        else
+          container_summaries << child
+          container_summary_texts << child.content.strip
+        end
+
+      elsif child.name == 'physfacet'
+        physfacets << child
+        physfacet_texts << child.content.strip
+
+      elsif child.name == 'dimensions'
+        dimensions << child
+        dimensions_texts << child.content.strip
+
+      elsif child.name != 'text'
+        other_extent_data << child
       end
-
-    elsif child.name == 'physfacet'
-      physfacets << child
-      physfacet_texts << child.content.strip
-
-    elsif child.name == 'dimensions'
-      dimensions << child
-      dimensions_texts << child.content.strip
-
-    elsif child.name != 'text'
-      other_extent_data << child
     end
   end
 

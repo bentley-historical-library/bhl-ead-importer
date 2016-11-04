@@ -93,6 +93,14 @@ class BHLEADConverter < EADConverter
 
 # END TITLEPROPER CUSTOMIZATIONS
 
+# BEGIN EXTERNAL DOCUMENT CUSTOMIZATIONS
+
+  with 'externaldocument' do
+    set :external_documents, {'title' => att('title'), 'location' => att('location'), 'jsonmodel_type' => 'external_document'}
+  end
+
+# END EXTERNAL DOCUMENT CUSTOMIZATIONS
+
 # BEGIN CLASSIFICATION CUSTOMIZATIONS
 
 # In our EADs, the most consistent way that MHC and UARP finding aids are identified is via the titlepage/publisher

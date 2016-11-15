@@ -758,7 +758,8 @@ with 'indexentry' do
 
   entry_type = ''
   entry_value = ''
-  entry_reference = ''
+  entry_ref_text = ''
+  entry_ref_target = ''
 
   indexentry = Nokogiri::XML::DocumentFragment.parse(inner_xml)
 
@@ -798,7 +799,8 @@ with 'indexentry' do
     end
 
     if child.name == 'ref'
-    entry_reference << child.content
+      entry_ref_text << child.content
+      entry_ref_target << (child['target'] || '')
     end
 
   end
@@ -806,7 +808,8 @@ with 'indexentry' do
   make :note_index_item, {
     :type => entry_type,
     :value => entry_value,
-    :reference_text => entry_reference
+    :reference_text => entry_reference,
+    
     } do |item|
   set ancestor(:note_index), :items, item
   end

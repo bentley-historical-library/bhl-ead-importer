@@ -46,6 +46,15 @@ class BHLEADConverter < EADConverter
       end
     end
 
+    # this is another little hack for legacy MARC records. There are a few dozen collections that have multiple call numbers
+    # e.g., one MARC record corresponds to the "Aa 1" portion of a collection that is in a small folder, that has a top container and
+    # a location listed in BEAL and another MARC corresponds to the "UAs" portion of a collection, which is located based on its call number,
+    # not listed in BEAL. These will require special attention for top containering, barcoding, and exporting to EAD, so we'll just add a second
+    # identifier for now, which contains all of the various call numbers corresponding to a single collection id
+    with 'unitid2' do
+      set :id_1, inner_xml.strip
+    end
+
 # BEGIN TITLEPROPER AND AUTHOR CUSTOMIZATIONS
 
 # The stock ArchivesSpace converter sets the author and titleproper elements each time it finds a titleproper or author elements

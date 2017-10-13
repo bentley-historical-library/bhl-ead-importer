@@ -18,10 +18,6 @@ class BHLEADConverter < EADConverter
     end
   end
 
-  def self.profile
-    "Convert EAD To ArchivesSpace JSONModel records"
-  end
-
   def format_content(content)
     super.gsub(/[, ]+$/,"") # Remove trailing commas and spaces
   end
@@ -51,7 +47,7 @@ class BHLEADConverter < EADConverter
     # a location listed in BEAL and another MARC corresponds to the "UAs" portion of a collection, which is located based on its call number,
     # not listed in BEAL. These will require special attention for top containering, barcoding, and exporting to EAD, so we'll just add a second
     # identifier for now, which contains all of the various call numbers corresponding to a single collection id
-    with 'unitid2' do
+    with 'unitid2' do |*|
       set :id_1, inner_xml.strip
     end
 
@@ -763,7 +759,7 @@ end
 # creating an index item with a 'value' from the <persname>, <famname>, etc.
 # and a 'reference_text' from the <ref>.
 
-with 'indexentry' do
+with 'indexentry' do |*|
 
   entry_type = ''
   entry_value = ''

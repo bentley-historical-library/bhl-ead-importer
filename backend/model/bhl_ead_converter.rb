@@ -759,6 +759,8 @@ end
 # creating an index item with a 'value' from the <persname>, <famname>, etc.
 # and a 'reference_text' from the <ref>.
 
+=begin
+
 with 'indexentry' do |*|
 
   entry_type = ''
@@ -841,6 +843,9 @@ end
     with 'indexentry/ref' do
        next
     end
+
+=end
+
 
 # END INDEX CUSTOMIZATIONS
 

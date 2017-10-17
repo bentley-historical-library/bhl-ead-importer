@@ -58,11 +58,11 @@ class BHLEADConverter < EADConverter
 # We want to use the titlepage statements. Changing this to be more explicit about using the statement that we want, and to remove some unwanted linebreaks.
     
 # The EAD importer ignores titlepage; we need to unignore it
-    with "titlepage" do
+    with "titlepage" do |*|
       @ignore = false
     end
 
-    with 'titlepage/titleproper' do
+    with 'titlepage/titleproper' do |*|
       type = att('type')
       title_statement = inner_xml.gsub("<lb/>"," <lb/>")
       case type
@@ -79,20 +79,20 @@ class BHLEADConverter < EADConverter
     end
 
 # Skip the titleproper and author statements from titlestmt
-    with 'titlestmt/titleproper' do
+    with 'titlestmt/titleproper' do |*|
       next
     end
 
-    with 'titlestmt/author' do
+    with 'titlestmt/author' do |*|
       next
     end
 
 # Skip these to override the default ArchiveSpace functionality, which searches for a titleproper or an author anywhere
-    with 'titleproper' do
+    with 'titleproper' do |*|
       next
     end
 
-    with 'author' do
+    with 'author' do |*|
       next
     end
 
@@ -100,7 +100,7 @@ class BHLEADConverter < EADConverter
 
 # BEGIN EXTERNAL DOCUMENT CUSTOMIZATIONS
 
-  with 'externaldocument' do
+  with 'externaldocument' do |*|
     set :external_documents, {'title' => att('title'), 'location' => att('location'), 'jsonmodel_type' => 'external_document'}
   end
 
@@ -123,7 +123,7 @@ class BHLEADConverter < EADConverter
 # For some reason the stock importer doesn't separate <chronlist>s out of notes like it does with <list>s
 # Like, it includes the mixed content <chronlist> within the note text and also makes a chronological list, duplicating the content
 # The addition of (split_tag = 'chronlist') to the insert_into_subnotes method call here fixes that
-    with 'chronlist' do
+    with 'chronlist' do |*|
       if  ancestor(:note_multipart)
         left_overs = insert_into_subnotes(split_tag = 'chronlist')
       else 
@@ -186,15 +186,15 @@ class BHLEADConverter < EADConverter
     end
 
 
-    with 'bibliography/bibref' do
+    with 'bibliography/bibref' do |*|
       next
     end
     
-    with 'bibliography/p' do
+    with 'bibliography/p' do |*|
         next
     end
     
-    with 'bibliography/head' do
+    with 'bibliography/head' do |*|
         next
     end
 
@@ -882,7 +882,7 @@ end
 # or just its title (if only the title exists), or just it's date (if only the date exists)
 # and then using that string as the imported digital object's title.
 
-with 'dao' do
+with 'dao' do |x|
 
   if att('ref') # A digital object has already been made
     make :instance, {

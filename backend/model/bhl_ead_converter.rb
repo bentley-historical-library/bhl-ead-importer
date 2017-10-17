@@ -73,7 +73,7 @@ class BHLEADConverter < EADConverter
       end
     end
 
-    with 'titlepage/author' do
+    with 'titlepage/author' do |*|
       author_statement = inner_xml.gsub("<lb/>"," <lb/>")
       set :finding_aid_author, author_statement.gsub("<lb/>","").gsub(/\s+/," ").strip
     end
@@ -180,7 +180,7 @@ class BHLEADConverter < EADConverter
         set :label,  format_content( inner_xml )
       end
 
-      with "index/p" do
+      with "index/p" do |*|
         set :content, format_content( inner_xml )
       end
     end
@@ -287,7 +287,7 @@ class BHLEADConverter < EADConverter
     end
     
 
-    with 'list' do
+    with 'list' do |*|
       next if ancestor(:note_index)
       if  ancestor(:note_multipart)
         left_overs = insert_into_subnotes 
@@ -332,7 +332,7 @@ class BHLEADConverter < EADConverter
       end
     end
     
-    with 'list/item' do
+    with 'list/item' do |*|
         # Okay this is another one of those hacky things that work
         # The problem: we have many items nested within items, like <list><item>First item <list><item>Subitem</item></list></item></list>
         # This would make one item like:
@@ -357,7 +357,7 @@ class BHLEADConverter < EADConverter
 # example of a 1:many tag:record relation (1+ <container> => 1 instance with 1 container)
 
 
-    with 'container' do
+    with 'container' do |*|
 
         next if context == :note_orderedlist
 
@@ -446,7 +446,7 @@ class BHLEADConverter < EADConverter
       'subject' => 'topical',
       'title' => 'uniform_title' # added title since we have some <title> tags in our controlaccesses
       }.each do |tag, type|
-        with "controlaccess/#{tag}" do
+        with "controlaccess/#{tag}" do |*|
           if att('ref')
             set ancestor(:resource, :archival_object), :subjects, {'ref' => att('ref')}
           else
@@ -461,7 +461,7 @@ class BHLEADConverter < EADConverter
         end
      end
 
-    with 'origination/corpname' do
+    with 'origination/corpname' do |*|
         if att('ref')
             set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
         else
@@ -469,7 +469,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'controlaccess/corpname' do
+    with 'controlaccess/corpname' do |*|
         corpname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
         terms ||= []
         corpname.children.each do |child|
@@ -495,7 +495,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'origination/famname' do
+    with 'origination/famname' do |*|
         if att('ref')
             set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
         else
@@ -503,7 +503,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'controlaccess/famname' do
+    with 'controlaccess/famname' do |*|
         famname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
         terms ||= []
         famname.children.each do |child|
@@ -529,7 +529,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'origination/persname' do
+    with 'origination/persname' do |*|
         if att('ref')
             set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
         else
@@ -537,7 +537,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'controlaccess/persname' do
+    with 'controlaccess/persname' do |*|
         persname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
         terms ||= []
         persname.children.each do |child|
@@ -604,7 +604,7 @@ def make_nested_note(note_name, tag)
   end
 end
 
-with 'physdesc' do
+with 'physdesc' do |*|
   next if context == :note_orderedlist # skip these
   physdesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
 
@@ -707,7 +707,7 @@ end
 
 # these changes fix that
 
-with "langmaterial" do
+with "langmaterial" do |*|
   # first, assign the primary language to the ead
   langmaterial = Nokogiri::XML::DocumentFragment.parse(inner_xml)
   langmaterial.children.each do |child|
@@ -736,7 +736,7 @@ with "langmaterial" do
 end
 
 # overwrite the default langusage tag behavior
-with "language" do
+with "language" do |*|
   next
 end
 
@@ -855,7 +855,7 @@ end
 # the stock importer action is to set the note label to the very last <head> it finds. This modification will only set the label if it does not already exist, ensuring
 # that it will only be set once.
 
-    with 'head' do
+    with 'head' do |*|
       if context == :note_multipart
         ancestor(:note_multipart) do |note|
             next unless note["label"].nil?
@@ -945,7 +945,7 @@ with 'dao' do |x|
   end
 end
 
-    with 'daodesc' do
+    with 'daodesc' do |*|
 
         ancestor(:digital_object) do |dobj|
           next if dobj.ref

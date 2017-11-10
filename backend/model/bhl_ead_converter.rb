@@ -18,10 +18,6 @@ class BHLEADConverter < EADConverter
     end
   end
 
-  def self.profile
-    "Convert EAD To ArchivesSpace JSONModel records"
-  end
-
   def format_content(content)
     super.gsub(/[, ]+$/,"") # Remove trailing commas and spaces
   end
@@ -51,7 +47,7 @@ class BHLEADConverter < EADConverter
     # a location listed in BEAL and another MARC corresponds to the "UAs" portion of a collection, which is located based on its call number,
     # not listed in BEAL. These will require special attention for top containering, barcoding, and exporting to EAD, so we'll just add a second
     # identifier for now, which contains all of the various call numbers corresponding to a single collection id
-    with 'unitid2' do
+    with 'unitid2' do |*|
       set :id_1, inner_xml.strip
     end
 
@@ -62,11 +58,11 @@ class BHLEADConverter < EADConverter
 # We want to use the titlepage statements. Changing this to be more explicit about using the statement that we want, and to remove some unwanted linebreaks.
     
 # The EAD importer ignores titlepage; we need to unignore it
-    with "titlepage" do
+    with "titlepage" do |*|
       @ignore = false
     end
 
-    with 'titlepage/titleproper' do
+    with 'titlepage/titleproper' do |*|
       type = att('type')
       title_statement = inner_xml.gsub("<lb/>"," <lb/>")
       case type
@@ -77,26 +73,26 @@ class BHLEADConverter < EADConverter
       end
     end
 
-    with 'titlepage/author' do
+    with 'titlepage/author' do |*|
       author_statement = inner_xml.gsub("<lb/>"," <lb/>")
       set :finding_aid_author, author_statement.gsub("<lb/>","").gsub(/\s+/," ").strip
     end
 
 # Skip the titleproper and author statements from titlestmt
-    with 'titlestmt/titleproper' do
+    with 'titlestmt/titleproper' do |*|
       next
     end
 
-    with 'titlestmt/author' do
+    with 'titlestmt/author' do |*|
       next
     end
 
 # Skip these to override the default ArchiveSpace functionality, which searches for a titleproper or an author anywhere
-    with 'titleproper' do
+    with 'titleproper' do |*|
       next
     end
 
-    with 'author' do
+    with 'author' do |*|
       next
     end
 
@@ -104,7 +100,7 @@ class BHLEADConverter < EADConverter
 
 # BEGIN EXTERNAL DOCUMENT CUSTOMIZATIONS
 
-  with 'externaldocument' do
+  with 'externaldocument' do |*|
     set :external_documents, {'title' => att('title'), 'location' => att('location'), 'jsonmodel_type' => 'external_document'}
   end
 
@@ -127,7 +123,7 @@ class BHLEADConverter < EADConverter
 # For some reason the stock importer doesn't separate <chronlist>s out of notes like it does with <list>s
 # Like, it includes the mixed content <chronlist> within the note text and also makes a chronological list, duplicating the content
 # The addition of (split_tag = 'chronlist') to the insert_into_subnotes method call here fixes that
-    with 'chronlist' do
+    with 'chronlist' do |*|
       if  ancestor(:note_multipart)
         left_overs = insert_into_subnotes(split_tag = 'chronlist')
       else 
@@ -184,21 +180,21 @@ class BHLEADConverter < EADConverter
         set :label,  format_content( inner_xml )
       end
 
-      with "index/p" do
+      with "index/p" do |*|
         set :content, format_content( inner_xml )
       end
     end
 
 
-    with 'bibliography/bibref' do
+    with 'bibliography/bibref' do |*|
       next
     end
     
-    with 'bibliography/p' do
+    with 'bibliography/p' do |*|
         next
     end
     
-    with 'bibliography/head' do
+    with 'bibliography/head' do |*|
         next
     end
 
@@ -291,7 +287,7 @@ class BHLEADConverter < EADConverter
     end
     
 
-    with 'list' do
+    with 'list' do |*|
       next if ancestor(:note_index)
       if  ancestor(:note_multipart)
         left_overs = insert_into_subnotes 
@@ -336,7 +332,7 @@ class BHLEADConverter < EADConverter
       end
     end
     
-    with 'list/item' do
+    with 'list/item' do |*|
         # Okay this is another one of those hacky things that work
         # The problem: we have many items nested within items, like <list><item>First item <list><item>Subitem</item></list></item></list>
         # This would make one item like:
@@ -358,75 +354,76 @@ class BHLEADConverter < EADConverter
 # Import att('type') as the container type for top containers, att('label') as the container type for subcontainers
 
 
-# example of a 1:many tag:record relation (1+ <container> => 1 instance with 1 container)
+    with 'container' do |*|
 
+      next if context == :note_orderedlist
 
-    with 'container' do
+      if context == :instance
+        # this container is nested inside the last one
+        # so add to the current sub_container
+        # note: there is not an example of this in:
+        #     backend/app/exporters/examples/ead/
+        # but the previous implementation supported it
+        # so continuing support here
+        add_to_instance(att('label'), format_content(inner_xml), att('id'))
+        return
+      end
 
-        next if context == :note_orderedlist
+      if att('parent')
+        # this container has a parent attribute
+        # so there should have been a sub_container previously
+        # with that id that we can add to
+        add_to_instance(att('label'), format_content(inner_xml), att('id'), att('parent'))
+        return
+      end
 
-        @containers ||= {}
+      if !att('id') && (instance = context_obj.instances.last)
+        # this container doesn't have an @id
+        # and has a container sibling before it
+        # so even though it doesn't have a parent attribute
+        # it is treated as a child of the prior sibling
+        # this pattern is seen in the wnyu.xml example
+        # it is necessary to test for @id because in vmi.xml a list
+        # of sibling containers represents more than one instance
+        add_to_instance(att('label'), format_content(inner_xml), att('id'))
+        return
+      end
 
-        # we've found that the container has a parent att and the parent is in
-        # our queue
-        if att("parent") && @containers[att('parent')]
-          cont = @containers[att('parent')]
+      # all of the cases that require adding to an existing sub_container
+      # are now handled, so having arrived here it is necessary to
+      # create a new instance with a sub_container
 
-        else
-          # there is not a parent. if there is an id, let's check if there's an
-          # instance before we proceed
-          inst = context == :instance ? context_obj : context_obj.instances.last 
-         
-          # if there are no instances, we need to make a new one.
-          # or, if there is an @id ( but no @parent) we can assume its a new
-          # top level container that will be referenced later, so we need to
-          # make a new instance
-          if ( inst.nil? or  att('id')  )
-            instance_label = att("label") ? att("label") : 'mixed_materials'
+      instance_type = att('label') || 'mixed_materials'
 
-            if instance_label =~ /(.*)\s\[([0-9]+)\]$/
-              instance_label = $1
-              barcode = $2
-            end
+      if instance_type =~ /(.*)\s+?[\(\[] *(.*) *[\)\]]$/
+        instance_type = $1
+        barcode = $2
+      end
 
-            make :instance, {
-              :instance_type => instance_label
-            } do |instance|
-              set ancestor(:resource, :archival_object), :instances, instance
-            end
-            
-            inst = context_obj
-          end
-        
-          # now let's check out instance to see if there's a container...
-          if inst.container.nil?
-            make :container do |cont|
-              set inst, :container, cont
-            end
-          end
+      make :instance, {
+        :instance_type => instance_type.strip
+      } do |instance|
+        set ancestor(:resource, :archival_object), :instances, instance
+      end
 
-          # and now finally we get the container. 
-          cont =  inst.container || context_obj
-          cont['barcode_1'] = barcode if barcode
-          cont['container_profile_key'] = att("altrender")
-        end
+      instance = context_obj
 
-        # now we fill it in
-        (1..3).to_a.each do |i|
-          next unless cont["type_#{i}"].nil?
-          if i == 1
-            cont["type_#{i}"] = att('type')
-          elsif i == 2 or i == 3
-            cont["type_#{i}"] = att('label')
-          end
-          cont["indicator_#{i}"] = format_content( inner_xml )
-          break
-        end
-        
-        #store it here incase we find it has a parent
-        @containers[att("id")] = cont if att("id")
+      top_container_uri = get_or_make_top_container(att('type'),
+                                                    format_content(inner_xml),
+                                                    barcode,
+                                                    att("altrender"))
 
+      make :sub_container, {
+        :top_container => {'ref' => top_container_uri}
+      } do |sub_container|
+        set instance, :sub_container, sub_container
+      end
+
+      # remember the instance as it might be necessary to add to it later
+      remember_instance(instance, att('id'))
     end
+
+
 # END CONTAINER MODIFICATIONS
 
 # BEGIN CUSTOM SUBJECT AND AGENT IMPORTS
@@ -450,7 +447,7 @@ class BHLEADConverter < EADConverter
       'subject' => 'topical',
       'title' => 'uniform_title' # added title since we have some <title> tags in our controlaccesses
       }.each do |tag, type|
-        with "controlaccess/#{tag}" do
+        with "controlaccess/#{tag}" do |*|
           if att('ref')
             set ancestor(:resource, :archival_object), :subjects, {'ref' => att('ref')}
           else
@@ -465,7 +462,7 @@ class BHLEADConverter < EADConverter
         end
      end
 
-    with 'origination/corpname' do
+    with 'origination/corpname' do |*|
         if att('ref')
             set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
         else
@@ -473,7 +470,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'controlaccess/corpname' do
+    with 'controlaccess/corpname' do |*|
         corpname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
         terms ||= []
         corpname.children.each do |child|
@@ -499,7 +496,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'origination/famname' do
+    with 'origination/famname' do |*|
         if att('ref')
             set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
         else
@@ -507,7 +504,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'controlaccess/famname' do
+    with 'controlaccess/famname' do |*|
         famname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
         terms ||= []
         famname.children.each do |child|
@@ -533,7 +530,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'origination/persname' do
+    with 'origination/persname' do |*|
         if att('ref')
             set ancestor(:resource, :archival_object), :linked_agents, {'ref' => att('ref'), 'role' => 'creator'}
         else
@@ -541,7 +538,7 @@ class BHLEADConverter < EADConverter
         end
     end
 
-    with 'controlaccess/persname' do
+    with 'controlaccess/persname' do |*|
         persname = Nokogiri::XML::DocumentFragment.parse(inner_xml)
         terms ||= []
         persname.children.each do |child|
@@ -608,7 +605,7 @@ def make_nested_note(note_name, tag)
   end
 end
 
-with 'physdesc' do
+with 'physdesc' do |*|
   next if context == :note_orderedlist # skip these
   physdesc = Nokogiri::XML::DocumentFragment.parse(inner_xml)
 
@@ -711,7 +708,7 @@ end
 
 # these changes fix that
 
-with "langmaterial" do
+with "langmaterial" do |*|
   # first, assign the primary language to the ead
   langmaterial = Nokogiri::XML::DocumentFragment.parse(inner_xml)
   langmaterial.children.each do |child|
@@ -740,7 +737,7 @@ with "langmaterial" do
 end
 
 # overwrite the default langusage tag behavior
-with "language" do
+with "language" do |*|
   next
 end
 
@@ -763,7 +760,9 @@ end
 # creating an index item with a 'value' from the <persname>, <famname>, etc.
 # and a 'reference_text' from the <ref>.
 
-with 'indexentry' do
+=begin
+
+with 'indexentry' do |*|
 
   entry_type = ''
   entry_value = ''
@@ -846,6 +845,9 @@ end
        next
     end
 
+=end
+
+
 # END INDEX CUSTOMIZATIONS
 
 # BEGIN HEAD CUSTOMIZATIONS
@@ -854,7 +856,7 @@ end
 # the stock importer action is to set the note label to the very last <head> it finds. This modification will only set the label if it does not already exist, ensuring
 # that it will only be set once.
 
-    with 'head' do
+    with 'head' do |*|
       if context == :note_multipart
         ancestor(:note_multipart) do |note|
             next unless note["label"].nil?
@@ -881,7 +883,7 @@ end
 # or just its title (if only the title exists), or just it's date (if only the date exists)
 # and then using that string as the imported digital object's title.
 
-with 'dao' do
+with 'dao' do |x|
 
   if att('ref') # A digital object has already been made
     make :instance, {
@@ -944,7 +946,7 @@ with 'dao' do
   end
 end
 
-    with 'daodesc' do
+    with 'daodesc' do |*|
 
         ancestor(:digital_object) do |dobj|
           next if dobj.ref

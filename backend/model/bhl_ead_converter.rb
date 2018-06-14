@@ -408,7 +408,7 @@ class BHLEADConverter < EADConverter
 
       instance = context_obj
 
-      top_container_uri = get_or_make_top_container(att('type'),
+      top_container_uri = get_or_make_top_container_uri(att('type'),
                                                     format_content(inner_xml),
                                                     barcode,
                                                     att("altrender"))

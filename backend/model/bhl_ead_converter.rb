@@ -262,8 +262,7 @@ class BHLEADConverter < EADConverter
 # REMINDER: If using the container management plugin, add the line 'next if context == :note_orderedlist' to "with 'container' do" in
 # the converter_extra_container_values mixin
 
-    %w(abstract langmaterial materialspec physloc).each do |note|
-      next if note == "langmaterial"
+    %w(abstract materialspec physloc).each do |note|
       with note do |node|
         next if context == :note_orderedlist # skip these
         next if context == :items # these too
@@ -693,6 +692,7 @@ end
 
 
 # BEGIN LANGUAGE CUSTOMIZATIONS
+# NOTE: These customizations have been deprecated in ArchivesSpace v2.7
 # By default, ASpace just uses the last <language> tag it finds as the primary
 # language of the material described. This results in incorrect finding-aid languages for many eads.
 
@@ -707,7 +707,7 @@ end
 # will result in a primary material language of German.
 
 # these changes fix that
-
+=begin 
 with "langmaterial" do |*|
   # first, assign the primary language to the ead
   langmaterial = Nokogiri::XML::DocumentFragment.parse(inner_xml)
@@ -739,7 +739,7 @@ end
 # overwrite the default langusage tag behavior
 with "language" do |*|
   next
-end
+end =end
 
 # END LANGUAGE CUSTOMIZATIONS
 
